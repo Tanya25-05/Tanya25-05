@@ -7,7 +7,11 @@ import { useEffect, useRef, useState } from "react";
 // faster/farther the cursor moves between frames, the more it
 // elongates — which is what makes a pause read as a dot but a swipe
 // read as a directional brush stroke.
-const BRUSH_SIZE = 66;
+// Kept small relative to GLOW_BLUR on purpose — a wide halo around a
+// small crisp core reads as "glowing brush tip"; a wide halo around a
+// brush that's already large starts to look like one continuous soft
+// cloud once strokes overlap, hiding the actual stroke shape.
+const BRUSH_SIZE = 42;
 const STAMP_ALPHA = 0.7;
 const BRUSH_POOL_SIZE = 6;
 const STRETCH_PER_PX = 0.09;
@@ -16,14 +20,7 @@ const MAX_STRETCH = 3;
 // (shadowBlur never touches the source pixels, only the shadow cast
 // from them), so this can go wide for a real neon glow without
 // reintroducing the "spreading" look overlapping stamps once had.
-// Set to the same fresh yellow as the fill (not a fixed pink) — a
-// blurred 24px halo covers far more area than the crisp core, so a
-// constant pink glow was visually drowning out the yellow fill
-// underneath on every new stamp. The per-frame age tint below repaints
-// this halo's pixels toward pink right along with the fill, so it
-// still ends up pink once the stroke has aged — just not from frame one.
-const GLOW_COLOR_FRESH = "rgba(255,222,90,0.9)";
-const GLOW_BLUR = 24;
+const GLOW_BLUR = 40;
 const POINTER_QUERY = "(hover: hover) and (pointer: fine)";
 // A stamp only lands once the cursor has moved at least this far
 // since the last one — without it, every mousemove-driven frame
@@ -33,60 +30,51 @@ const POINTER_QUERY = "(hover: hover) and (pointer: fine)";
 // between stamps is what makes a continuous stroke read as calm and
 // deliberate instead of frantic, with the individual dabs still
 // visibly distinct from each other rather than smeared solid.
-const MIN_STAMP_SPACING = 16;
+const MIN_STAMP_SPACING = 10;
 // A single stretched dab is capped at MAX_STRETCH, which can't always
 // bridge a fast mouse's full per-frame travel distance — leaving a
 // visible gap. Once the gap exceeds this, place several stamps along
 // the straight line between the last position and the new one instead
 // of just one, so the stroke stays unbroken regardless of speed.
 const MAX_SINGLE_STAMP_GAP = BRUSH_SIZE * 0.9;
-// Erasing this fraction of the canvas every frame fades a stroke to
-// fully, imperceptibly gone by ~4 seconds (~240 frames at 60fps:
-// (1-0.019)^240 ≈ 0.0098 opacity remaining — effectively zero, not
-// just faint).
-const FADE_PER_FRAME = 0.019;
-// Every frame, in addition to fading, a translucent pink is tinted
-// over the whole canvas's existing (non-transparent) content via
-// source-atop — which recolors pixels without touching their alpha.
-// Paint is stamped fresh in solid yellow; this pass then ages it
-// toward pink over roughly the same ~4s lifetime as the alpha fade,
-// so a stroke reads yellow where it was just laid down and pink as it
-// nears the end of its life. Deliberately a canvas-wide pass rather
-// than a per-stamp gradient — a per-stamp gradient was tried first,
-// but consecutive overlapping stamps (spaced far closer than the
-// brush's own width, to stay a continuous stroke) kept painting their
-// own trailing half directly over the previous stamp's leading half,
-// so only a thin sliver at the live tip ever stayed yellow and the
-// rest of the stroke read as solid pink. Aging color over time instead
-// of position is immune to that: every pixel ages at the same rate
-// regardless of how much stamp overlap put it there.
-//
-// This rate must be much slower than it looks like it should be:
-// exponential decay is front-loaded, so even matching FADE_PER_FRAME
-// here shifts a stroke roughly halfway to pink within its first
-// ~0.6s — long before the 4s fade is anywhere near done — which reads
-// as "there's no yellow, just pink" almost immediately. At 0.0065,
-// the half-life is ~1.8s, so freshly-drawn paint stays clearly
-// yellow-dominant for the first second or so before gradually giving
-// way to pink as it nears the end of its life.
-const AGE_TINT_PER_FRAME = 0.0065;
-const FRESH_COLOR = "rgba(255,222,90,1)";
-const AGED_COLOR_RGB = "255,110,205";
+
+// A yellow-to-pink gradient over a stroke's life turned out to be
+// genuinely hard to get right as a single canvas with a computed
+// color aging over time (tried: per-stamp spatial gradients — killed
+// by overlapping stamps repainting each other's color; a canvas-wide
+// per-frame color tint — required the tint rate and the alpha-fade
+// rate to line up almost exactly, or the color shift either happened
+// before anyone could see it or arrived only after the stroke had
+// already faded past visibility). Two independent layers sidesteps
+// all of that: every stamp is drawn twice, once onto each canvas
+// below, at the same position/angle/stretch. YELLOW is opaque and
+// fades fast (~1s) so it's what you see the instant paint lands. PINK
+// is drawn underneath at the same spot and fades slowly (~4s) — while
+// yellow is still opaque on top it's completely hidden, and as yellow
+// fades out from on top of it, pink is simply what's left showing
+// through. No timing coordination needed for the transition to read
+// correctly; it falls out of "fast fade on top of a slow fade"
+// automatically regardless of the exact rates chosen for either.
+type Layer = {
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+  brushPool: HTMLCanvasElement[];
+  fadePerFrame: number;
+  glowColor: string;
+};
 
 // Two layers, not scattered bristle lines: a soft, lighter outer body
 // (a closed path with a subtly wobbly radius, so the edge still reads
-// as hand-drawn) plus a small, bright, saturated core at the center —
-// both tinted the same fresh yellow at stamp time; see AGE_TINT_PER_FRAME
-// above for how it ages toward pink afterward. The core is an ellipse
-// — already thin along one axis before any stretch — so once the
-// whole brush is scaled along the direction of travel, that core
-// becomes a thin glowing centerline running through the middle of the
-// stroke, like a neon tube. No separate edge/rim marks — those were
-// concentrating extra opacity right at each stamp's boundary, and
-// where stamps overlapped along a stroke that accumulated into a
-// visible leftover "border" outline instead of fading evenly with
-// the rest of the mark.
-function makeBrush(): HTMLCanvasElement {
+// as hand-drawn) plus a small, bright, saturated core at the center.
+// The core is an ellipse — already thin along one axis before any
+// stretch — so once the whole brush is scaled along the direction of
+// travel, that core becomes a thin glowing centerline running through
+// the middle of the stroke, like a neon tube. No separate edge/rim
+// marks — those were concentrating extra opacity right at each
+// stamp's boundary, and where stamps overlapped along a stroke that
+// accumulated into a visible leftover "border" outline instead of
+// fading evenly with the rest of the mark.
+function makeBrush(color: string): HTMLCanvasElement {
   const brush = document.createElement("canvas");
   brush.width = BRUSH_SIZE;
   brush.height = BRUSH_SIZE;
@@ -115,7 +103,7 @@ function makeBrush(): HTMLCanvasElement {
   ctx.fill();
 
   ctx.globalCompositeOperation = "source-atop";
-  ctx.fillStyle = FRESH_COLOR;
+  ctx.fillStyle = color;
   ctx.fillRect(0, 0, BRUSH_SIZE, BRUSH_SIZE);
   ctx.globalCompositeOperation = "source-over";
 
@@ -123,17 +111,38 @@ function makeBrush(): HTMLCanvasElement {
 }
 
 export default function PaintBrushGlow() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pinkCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const yellowCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [active, setActive] = useState(false);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const section = canvas.closest("section");
+    const pinkCanvas = pinkCanvasRef.current;
+    const yellowCanvas = yellowCanvasRef.current;
+    if (!pinkCanvas || !yellowCanvas) return;
+    const pinkCtx = pinkCanvas.getContext("2d");
+    const yellowCtx = yellowCanvas.getContext("2d");
+    if (!pinkCtx || !yellowCtx) return;
+    const section = yellowCanvas.closest("section");
 
-    const brushPool = Array.from({ length: BRUSH_POOL_SIZE }, () => makeBrush());
+    const layers: Layer[] = [
+      {
+        canvas: pinkCanvas,
+        ctx: pinkCtx,
+        brushPool: Array.from({ length: BRUSH_POOL_SIZE }, () => makeBrush("rgba(255,90,195,1)")),
+        // ~4s: (1-0.019)^240 ≈ 0.0098 remaining.
+        fadePerFrame: 0.019,
+        glowColor: "rgba(255,90,195,0.9)",
+      },
+      {
+        canvas: yellowCanvas,
+        ctx: yellowCtx,
+        brushPool: Array.from({ length: BRUSH_POOL_SIZE }, () => makeBrush("rgba(255,222,90,1)")),
+        // ~1s: (1-0.075)^60 ≈ 0.0089 remaining.
+        fadePerFrame: 0.075,
+        glowColor: "rgba(255,222,90,0.9)",
+      },
+    ];
+
     // `fresh` marks that there's no meaningful "last position" to
     // measure a drag distance from yet (first stamp ever, or the
     // cursor just re-entered after being outside) — without it, the
@@ -152,27 +161,31 @@ export default function PaintBrushGlow() {
     let pending: { x: number; y: number }[] = [];
 
     const stamp = (x: number, y: number, angle: number, stretch: number) => {
-      const brush = brushPool[Math.floor(Math.random() * brushPool.length)];
-      ctx.save();
-      // shadowBlur/shadowColor glow the shape's own alpha silhouette
-      // outward without blurring the shape itself — one draw gives a
-      // crisp solid stamp with a neon halo around it for free.
-      ctx.shadowColor = GLOW_COLOR_FRESH;
-      ctx.shadowBlur = GLOW_BLUR;
-      ctx.translate(x, y);
-      ctx.rotate(angle);
-      ctx.scale(stretch, 1);
-      ctx.globalAlpha = STAMP_ALPHA;
-      ctx.drawImage(brush, -BRUSH_SIZE / 2, -BRUSH_SIZE / 2, BRUSH_SIZE, BRUSH_SIZE);
-      ctx.globalAlpha = 1;
-      ctx.restore();
+      for (const layer of layers) {
+        const brush = layer.brushPool[Math.floor(Math.random() * layer.brushPool.length)];
+        layer.ctx.save();
+        // shadowBlur/shadowColor glow the shape's own alpha silhouette
+        // outward without blurring the shape itself — one draw gives
+        // a crisp solid stamp with a neon halo around it for free.
+        layer.ctx.shadowColor = layer.glowColor;
+        layer.ctx.shadowBlur = GLOW_BLUR;
+        layer.ctx.translate(x, y);
+        layer.ctx.rotate(angle);
+        layer.ctx.scale(stretch, 1);
+        layer.ctx.globalAlpha = STAMP_ALPHA;
+        layer.ctx.drawImage(brush, -BRUSH_SIZE / 2, -BRUSH_SIZE / 2, BRUSH_SIZE, BRUSH_SIZE);
+        layer.ctx.globalAlpha = 1;
+        layer.ctx.restore();
+      }
     };
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = canvas.clientWidth * dpr;
-      canvas.height = canvas.clientHeight * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for (const layer of layers) {
+        layer.canvas.width = layer.canvas.clientWidth * dpr;
+        layer.canvas.height = layer.canvas.clientHeight * dpr;
+        layer.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
     };
     resize();
     window.addEventListener("resize", resize);
@@ -185,7 +198,7 @@ export default function PaintBrushGlow() {
     // for the events that did get merged, so every real point the
     // cursor visited is captured, not just what made it through.
     const onMove = (e: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
+      const rect = yellowCanvas.getBoundingClientRect();
       const events = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [];
       const points = events.length ? events : [e];
       for (const ev of points) {
@@ -265,19 +278,12 @@ export default function PaintBrushGlow() {
     let frameId: number;
     const tick = () => {
       if (hasFinePointer && heroVisible) {
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.fillStyle = `rgba(0,0,0,${FADE_PER_FRAME})`;
-        ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-        ctx.globalCompositeOperation = "source-over";
-
-        // Ages existing paint toward pink (see AGE_TINT_PER_FRAME
-        // above). Runs before this frame's new stamps are drawn, so
-        // paint laid down just now stays pure fresh yellow rather than
-        // getting nudged toward pink in the same frame it appears.
-        ctx.globalCompositeOperation = "source-atop";
-        ctx.fillStyle = `rgba(${AGED_COLOR_RGB},${AGE_TINT_PER_FRAME})`;
-        ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-        ctx.globalCompositeOperation = "source-over";
+        for (const layer of layers) {
+          layer.ctx.globalCompositeOperation = "destination-out";
+          layer.ctx.fillStyle = `rgba(0,0,0,${layer.fadePerFrame})`;
+          layer.ctx.fillRect(0, 0, layer.canvas.clientWidth, layer.canvas.clientHeight);
+          layer.ctx.globalCompositeOperation = "source-over";
+        }
 
         if (pending.length) {
           // Every point actually visited since the last frame, laid
@@ -303,10 +309,17 @@ export default function PaintBrushGlow() {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="pointer-events-none absolute inset-0 z-5 h-full w-full transition-opacity duration-500"
-      style={{ opacity: active ? 0.9 : 0 }}
-    />
+    <>
+      <canvas
+        ref={pinkCanvasRef}
+        className="pointer-events-none absolute inset-0 z-5 h-full w-full transition-opacity duration-500"
+        style={{ opacity: active ? 0.9 : 0 }}
+      />
+      <canvas
+        ref={yellowCanvasRef}
+        className="pointer-events-none absolute inset-0 z-5 h-full w-full transition-opacity duration-500"
+        style={{ opacity: active ? 0.9 : 0 }}
+      />
+    </>
   );
 }
