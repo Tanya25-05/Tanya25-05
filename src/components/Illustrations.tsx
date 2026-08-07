@@ -138,14 +138,18 @@ const toolBadges = [
 // a handful of items intentionally sit outside the ~59% that's visible
 // at rest so there's something new to find at either edge.
 // Drop images into public/illustrations/1.png .. 7.png.
+// left is deliberately kept out of the ~35-65% band — that's where
+// the viewport center (and the wordmark sitting on it) lands at rest,
+// and an image directly behind the text there just reads as clutter
+// even though the text itself always renders on top.
 const collage = [
   { src: "/illustrations/1.png", alt: "Illustration 1", top: "8%", left: "5%", size: "w-44 h-36 sm:w-64 sm:h-48", rotate: -6 },
-  { src: "/illustrations/2.png", alt: "Illustration 2", top: "55%", left: "16%", size: "w-40 h-32 sm:w-56 sm:h-40", rotate: 4 },
-  { src: "/illustrations/8.png", alt: "Illustration 3", top: "15%", left: "30%", size: "w-40 h-48 sm:w-52 sm:h-64", rotate: 3 },
-  { src: "/illustrations/4.png", alt: "Illustration 4", top: "62%", left: "40%", size: "w-44 h-36 sm:w-60 sm:h-44", rotate: -3 },
-  { src: "/illustrations/5.png", alt: "Illustration 5", top: "10%", left: "62%", size: "w-48 h-36 sm:w-72 sm:h-48", rotate: -5 },
-  { src: "/illustrations/6.png", alt: "Illustration 6", top: "58%", left: "84%", size: "w-36 h-48 sm:w-48 sm:h-64", rotate: 6 },
-  { src: "/illustrations/7.png", alt: "Illustration 7", top: "22%", left: "95%", size: "w-36 h-28 sm:w-48 sm:h-36", rotate: -2 },
+  { src: "/illustrations/2.png", alt: "Illustration 2", top: "55%", left: "14%", size: "w-40 h-32 sm:w-56 sm:h-40", rotate: 4 },
+  { src: "/illustrations/8.png", alt: "Illustration 3", top: "15%", left: "26%", size: "w-40 h-48 sm:w-52 sm:h-64", rotate: 3 },
+  { src: "/illustrations/4.png", alt: "Illustration 4", top: "62%", left: "68%", size: "w-44 h-36 sm:w-60 sm:h-44", rotate: -3 },
+  { src: "/illustrations/5.png", alt: "Illustration 5", top: "10%", left: "78%", size: "w-48 h-36 sm:w-72 sm:h-48", rotate: -5 },
+  { src: "/illustrations/6.png", alt: "Illustration 6", top: "58%", left: "90%", size: "w-36 h-48 sm:w-48 sm:h-64", rotate: 6 },
+  { src: "/illustrations/7.png", alt: "Illustration 7", top: "22%", left: "98%", size: "w-36 h-28 sm:w-48 sm:h-36", rotate: -2 },
 ];
 
 const TRACK_WIDTH_VW = 170;
@@ -267,13 +271,24 @@ export default function Illustrations() {
         </SectionHeading>
       </div>
 
-      {/* the scrollable wide canvas — overflow-y-hidden and
-          touch-pan-x mean this element has no vertical scroll
-          capacity at all, on any device, so a mouse wheel or a
-          vertical swipe always falls straight through to the page */}
+      {/* touch-action was previously pinned to pan-x, on the assumption
+          that a vertical swipe would "fall through" to the page since
+          this element has no vertical scroll capacity (overflow-y-
+          hidden). That assumption was wrong: touch-action:pan-x doesn't
+          mean "let vertical panning chain up" — it means vertical
+          panning is disallowed on this element outright, full stop, no
+          fallback. On mobile that's exactly what "trapped once you
+          scroll in" looks like: every vertical swipe starting over this
+          full-viewport-height panel is simply eaten. touch-auto (the
+          default) lets the browser decide per-axis from actual
+          overflow — horizontal swipes still pan this element (real
+          overflow-x content), vertical swipes have nothing to consume
+          here and correctly chain to the page. The onWheel handler
+          below only ever covered desktop; touch devices never fire
+          wheel events, so this was the one actually gating mobile. */}
       <div
         ref={panelRef}
-        className="absolute inset-0 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="absolute inset-0 overflow-x-auto overflow-y-hidden touch-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <div
           ref={trackRef}
