@@ -10,7 +10,7 @@ export default function Card({ title, description, color }: CardProps) {
       <div className="h-40" style={{ backgroundColor: color }} />
       <div className="p-4">
         <h3 className="font-semibold text-sm mb-1">{title}</h3>
-        <p className="text-xs text-zinc-500 leading-relaxed">{description}</p>
+        <p className="text-sm italic leading-6 text-zinc-500">{description}</p>
       </div>
     </div>
   );

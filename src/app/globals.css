@@ -1,15 +1,19 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-instrument-serif);
 }
 
+/* One typographic system, site-wide: serif is the default for
+   everything (matching the link labels in the hero's table of
+   contents), mono is reserved for small-caps labels/meta/numbers
+   (matching that same table's index and page-number columns). No
+   third, unstyled sans-serif tier. */
 body {
   background: #fafafa;
   color: #1a1a1a;
-  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  font-family: var(--font-serif, Georgia, "Times New Roman", serif);
 }
 
 html {
@@ -19,6 +23,11 @@ html {
 html,
 body {
   cursor: default;
+  /* Site-wide guard: nothing on the page should ever be able to
+     introduce a horizontal scrollbar. The Designing section's pan is
+     unaffected — it's a nested overflow-x-auto element, a separate
+     scroll context from the document itself. */
+  overflow-x: hidden;
 }
 
 ::selection {

@@ -82,7 +82,7 @@ export default function GithubProjects() {
           className="block bg-white rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-200 p-4"
         >
           <h3 className="font-semibold text-sm mb-1">{repo.name}</h3>
-          <p className="text-xs text-zinc-500 leading-relaxed mb-3 line-clamp-2">
+          <p className="text-sm italic leading-6 text-zinc-500 mb-3 line-clamp-2">
             {repo.description || "No description provided."}
           </p>
           <div className="font-mono text-[11px] tracking-wide text-zinc-400">

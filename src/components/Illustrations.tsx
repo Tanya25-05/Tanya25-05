@@ -40,22 +40,24 @@ function PaintbrushIcon() {
 // at rest so there's something new to find at either edge.
 // Drop images into public/illustrations/1.png .. 7.png.
 const collage = [
-  { src: "/illustrations/1.png", alt: "Illustration 1", top: "8%", left: "5%", size: "w-40 h-32 sm:w-60 sm:h-44", rotate: -6 },
-  { src: "/illustrations/2.png", alt: "Illustration 2", top: "55%", left: "16%", size: "w-36 h-28 sm:w-52 sm:h-36", rotate: 4 },
-  { src: "/illustrations/3.png", alt: "Illustration 3", top: "15%", left: "30%", size: "w-36 h-44 sm:w-48 sm:h-60", rotate: 3 },
-  { src: "/illustrations/4.png", alt: "Illustration 4", top: "62%", left: "40%", size: "w-40 h-32 sm:w-56 sm:h-40", rotate: -3 },
-  { src: "/illustrations/5.png", alt: "Illustration 5", top: "10%", left: "62%", size: "w-44 h-32 sm:w-64 sm:h-44", rotate: -5 },
-  { src: "/illustrations/6.png", alt: "Illustration 6", top: "58%", left: "84%", size: "w-32 h-44 sm:w-44 sm:h-60", rotate: 6 },
-  { src: "/illustrations/7.png", alt: "Illustration 7", top: "22%", left: "95%", size: "w-32 h-24 sm:w-44 sm:h-32", rotate: -2 },
+  { src: "/illustrations/1.png", alt: "Illustration 1", top: "8%", left: "5%", size: "w-44 h-36 sm:w-64 sm:h-48", rotate: -6 },
+  { src: "/illustrations/2.png", alt: "Illustration 2", top: "55%", left: "16%", size: "w-40 h-32 sm:w-56 sm:h-40", rotate: 4 },
+  { src: "/illustrations/8.png", alt: "Illustration 3", top: "15%", left: "30%", size: "w-40 h-48 sm:w-52 sm:h-64", rotate: 3 },
+  { src: "/illustrations/4.png", alt: "Illustration 4", top: "62%", left: "40%", size: "w-44 h-36 sm:w-60 sm:h-44", rotate: -3 },
+  { src: "/illustrations/5.png", alt: "Illustration 5", top: "10%", left: "62%", size: "w-48 h-36 sm:w-72 sm:h-48", rotate: -5 },
+  { src: "/illustrations/6.png", alt: "Illustration 6", top: "58%", left: "84%", size: "w-36 h-48 sm:w-48 sm:h-64", rotate: 6 },
+  { src: "/illustrations/7.png", alt: "Illustration 7", top: "22%", left: "95%", size: "w-36 h-28 sm:w-48 sm:h-36", rotate: -2 },
 ];
 
 const TRACK_WIDTH_VW = 170;
-const TRACK_HEIGHT_VH = 150;
-// Y needs heavier damping than X: the panel is wider than it is tall,
-// so the same mouse-pixel movement swings normY past ±1 much faster
-// than normX, making vertical pan feel twitchy at the default LERP.
+// Horizontal panning only — the track is exactly as tall as the panel
+// (no vertical scroll room at all). Giving this element any vertical
+// scroll capacity means a mouse wheel or a touch swipe gets captured
+// by the canvas instead of the page: the canvas always has more room
+// to consume, so the scroll never chains up and the section becomes
+// impossible to scroll past. Horizontal-only avoids that entirely,
+// since vertical wheel/swipe input has nothing here to grab onto.
 const LERP_X = 0.07;
-const LERP_Y = 0.045;
 
 export default function Illustrations() {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -68,34 +70,45 @@ export default function Illustrations() {
 
     const centerScroll = () => {
       panel.scrollLeft = (track.scrollWidth - panel.clientWidth) / 2;
-      panel.scrollTop = (track.scrollHeight - panel.clientHeight) / 2;
     };
     centerScroll();
     window.addEventListener("resize", centerScroll);
+
+    // A mouse wheel/trackpad gesture over an overflow-x:auto element is
+    // browser-dependent about whether it chains up to the page — some
+    // trackpads report enough incidental deltaX that the panel keeps
+    // consuming the gesture for horizontal panning instead of letting
+    // it scroll the page, which is exactly the "stuck here" bug. Take
+    // wheel input over unconditionally and always forward it to the
+    // page's own vertical scroll, so it can never get captured here.
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      window.scrollBy(0, e.deltaY);
+    };
+    panel.addEventListener("wheel", onWheel, { passive: false });
 
     // The hover auto-pan is a desktop nicety layered on top of always-
     // working native scroll — skip it on touch so it never fights a
     // swipe gesture.
     const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
     if (!canHover) {
-      return () => window.removeEventListener("resize", centerScroll);
+      return () => {
+        window.removeEventListener("resize", centerScroll);
+        panel.removeEventListener("wheel", onWheel);
+      };
     }
 
-    const target = { x: 0, y: 0 };
-    const smooth = { x: 0, y: 0 };
+    const target = { x: 0 };
+    const smooth = { x: 0 };
 
     const handleMove = (e: MouseEvent) => {
       const rect = panel.getBoundingClientRect();
       const normX = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2); // -1..1
-      const normY = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2); // -1..1
       const maxRangeX = (track.scrollWidth - panel.clientWidth) / 2;
-      const maxRangeY = (track.scrollHeight - panel.clientHeight) / 2;
       target.x = normX * maxRangeX;
-      target.y = normY * maxRangeY;
     };
     const handleLeave = () => {
       target.x = 0;
-      target.y = 0;
     };
 
     panel.addEventListener("mousemove", handleMove);
@@ -104,17 +117,15 @@ export default function Illustrations() {
     let frameId: number;
     const tick = () => {
       smooth.x += (target.x - smooth.x) * LERP_X;
-      smooth.y += (target.y - smooth.y) * LERP_Y;
       const centerX = (track.scrollWidth - panel.clientWidth) / 2;
-      const centerY = (track.scrollHeight - panel.clientHeight) / 2;
       panel.scrollLeft = centerX + smooth.x;
-      panel.scrollTop = centerY + smooth.y;
       frameId = requestAnimationFrame(tick);
     };
     frameId = requestAnimationFrame(tick);
 
     return () => {
       window.removeEventListener("resize", centerScroll);
+      panel.removeEventListener("wheel", onWheel);
       panel.removeEventListener("mousemove", handleMove);
       panel.removeEventListener("mouseleave", handleLeave);
       cancelAnimationFrame(frameId);
@@ -164,17 +175,19 @@ export default function Illustrations() {
         </div>
       </div>
 
-      {/* the scrollable wide + tall canvas */}
+      {/* the scrollable wide canvas — overflow-y-hidden and
+          touch-pan-x mean this element has no vertical scroll
+          capacity at all, on any device, so a mouse wheel or a
+          vertical swipe always falls straight through to the page */}
       <div
         ref={panelRef}
-        className="absolute inset-0 overflow-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="absolute inset-0 overflow-x-auto overflow-y-hidden touch-pan-x overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <div
           ref={trackRef}
-          className="relative"
+          className="relative h-full"
           style={{
             width: `${TRACK_WIDTH_VW}vw`,
-            height: `${TRACK_HEIGHT_VH}vh`,
             backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.16) 1.5px, transparent 1.5px)",
             backgroundSize: "32px 32px",
           }}
@@ -182,7 +195,7 @@ export default function Illustrations() {
           {collage.map((item) => (
             <div
               key={item.src}
-              className={`absolute ${item.size} rounded-lg overflow-hidden bg-zinc-800 shadow-[0_12px_30px_rgba(0,0,0,0.45)] transition-[scale] duration-300 ease-out hover:scale-105 hover:z-20`}
+              className={`absolute ${item.size} rounded-lg overflow-hidden bg-zinc-800 shadow-[0_12px_30px_rgba(0,0,0,0.45)] transition-[scale] duration-300 ease-out hover:scale-110 hover:z-20`}
               style={{
                 top: item.top,
                 left: item.left,
@@ -214,7 +227,7 @@ export default function Illustrations() {
       </div>
 
       <p className="absolute bottom-4 inset-x-0 text-center text-[11px] text-zinc-500 pointer-events-none">
-        hover toward an edge — or scroll — to see more
+        hover toward an edge to see more — scroll to move on
       </p>
     </section>
   );
