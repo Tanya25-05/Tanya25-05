@@ -14,7 +14,10 @@ interface Props {
 // vw-based clamp keeps every layer full-bleed at any viewport width
 // while staying pixel-aligned with the other layers (they all share
 // the same clamp expression).
-const GRID_FONT = "text-[clamp(6px,1.2vw,22px)] leading-[clamp(7px,1.3vw,24px)]";
+// Floor is low enough that 140 monospace columns never exceeds a
+// narrow phone's viewport width (would otherwise get clipped by the
+// hero's overflow-hidden and lose the right side of the range).
+const GRID_FONT = "text-[clamp(3px,1.2vw,22px)] leading-[clamp(3.5px,1.3vw,24px)]";
 
 // Decorative back/mid layers only — a slow idle sway for atmosphere.
 // The front layer (FrontMountainMask) stays perfectly still since it

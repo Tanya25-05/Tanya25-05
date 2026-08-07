@@ -1,4 +1,6 @@
-const GRID_FONT = "text-[clamp(6px,1.2vw,22px)] leading-[clamp(7px,1.3vw,24px)]";
+// Floor kept in sync with MountainLayer's — same reasoning: 140
+// columns must never exceed a narrow phone's viewport width.
+const GRID_FONT = "text-[clamp(3px,1.2vw,22px)] leading-[clamp(3.5px,1.3vw,24px)]";
 
 export default function FrontMountainMask({ ascii }: { ascii: string }) {
   return (

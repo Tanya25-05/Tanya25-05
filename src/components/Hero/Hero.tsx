@@ -12,13 +12,13 @@ import FrontMountainMask from "./FrontMountainMask";
 import { HeroScrollContext } from "./HeroScrollContext";
 import HeroText from "./HeroText";
 import MountainLayer from "./MountainLayer";
-import { FRONT_ROWS } from "./mountainMetrics";
+import { BACK_ROWS, FRONT_ROWS, MID_ROWS } from "./mountainMetrics";
 import { useMouseParallax } from "./useMouseParallax";
 
 const COLS = 140;
 
-const BACK = generateMountainLayer(COLS, 27, 7, 41);
-const MID = generateMountainLayer(COLS, 23, 8, 23);
+const BACK = generateMountainLayer(COLS, BACK_ROWS, 7, 41);
+const MID = generateMountainLayer(COLS, MID_ROWS, 8, 23);
 const FRONT = generateMountainLayer(COLS, FRONT_ROWS, 8, 11);
 
 export default function Hero() {
@@ -31,13 +31,15 @@ export default function Hero() {
   // shared group) so BACK and MID can sit on opposite sides of
   // HeroText in the stacking order — a `transform` wrapper forms its
   // own stacking context, so a shared wrapper could never let text
-  // slot in between its children.
-  const backParallaxRef = useMouseParallax();
-  const midParallaxRef = useMouseParallax();
+  // slot in between its children. Different strengths give the two
+  // layers relative motion against each other (the actual depth cue
+  // that reads as "parallax" — moving in lockstep wouldn't).
+  const backParallaxRef = useMouseParallax(0.6);
+  const midParallaxRef = useMouseParallax(1.3);
 
   return (
     <HeroScrollContext.Provider value={scrollYProgress}>
-      <section ref={sectionRef} className="relative h-[220vh] w-full bg-white">
+      <section ref={sectionRef} className="relative h-[240vh] w-full bg-white">
         <div className="sticky top-0 flex h-screen w-full flex-col items-center justify-center overflow-hidden bg-white">
           {/* almost-transparent back layer — behind the text, free to overlap it */}
           <div ref={backParallaxRef} className="absolute inset-0 z-0" aria-hidden>

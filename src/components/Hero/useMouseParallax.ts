@@ -10,7 +10,7 @@ import { useEffect, useRef } from "react";
 // scrolling, and it drives only the back/mid decorative layers — the
 // front mountain stays put since it doubles as the text's occluder and
 // can't drift out of alignment with it.
-export function useMouseParallax() {
+export function useMouseParallax(strength: number = 1) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,15 +22,15 @@ export function useMouseParallax() {
     const smooth = { x: 0, y: 0 };
 
     const handleMove = (e: MouseEvent) => {
-      target.x = (e.clientX / window.innerWidth - 0.5) * 24;
-      target.y = (e.clientY / window.innerHeight - 0.5) * 14;
+      target.x = (e.clientX / window.innerWidth - 0.5) * 18 * strength;
+      target.y = (e.clientY / window.innerHeight - 0.5) * 10 * strength;
     };
     window.addEventListener("mousemove", handleMove);
 
     let frameId: number;
     const tick = () => {
-      smooth.x += (target.x - smooth.x) * 0.22;
-      smooth.y += (target.y - smooth.y) * 0.22;
+      smooth.x += (target.x - smooth.x) * 0.08;
+      smooth.y += (target.y - smooth.y) * 0.08;
       el.style.transform = `translate3d(${smooth.x}px, ${smooth.y}px, 0)`;
       frameId = requestAnimationFrame(tick);
     };
@@ -40,7 +40,7 @@ export function useMouseParallax() {
       window.removeEventListener("mousemove", handleMove);
       cancelAnimationFrame(frameId);
     };
-  }, []);
+  }, [strength]);
 
   return ref;
 }

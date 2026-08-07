@@ -13,7 +13,7 @@ import ScrollFadeIn from "./ScrollFadeIn";
 // <audio> tag simply has nothing to play and stays silent.
 export default function AmbientAudio() {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
 
   useEffect(() => {
     const start = () => {

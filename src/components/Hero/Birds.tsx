@@ -15,7 +15,7 @@ export default function Birds() {
       {birds.map((b, i) => (
         <span
           key={i}
-          className="bird absolute animate-bird-fly"
+          className="bird absolute z-25 animate-bird-fly"
           style={{
             top: b.top,
             left: 0,

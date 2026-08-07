@@ -126,7 +126,7 @@ export default function Illustrations() {
       id="designing"
       data-stream-checkpoint="Designing"
       data-stream-x="20"
-      className="relative w-full h-screen overflow-hidden bg-zinc-900"
+      className="relative w-full h-[120vh] overflow-hidden bg-zinc-900"
     >
       <div
         className="absolute inset-0 opacity-60"
