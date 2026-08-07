@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-instrument-serif);
+}
+
+body {
+  background: #fafafa;
+  color: #1a1a1a;
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  cursor: default;
+}
+
+::selection {
+  background: #ec4899;
+  color: #ffffff;
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.animate-float {
+  animation: float-y 5s ease-in-out infinite;
+}
+
+@keyframes cloud-drift {
+  from {
+    transform: translateX(-20vw);
+  }
+  to {
+    transform: translateX(120vw);
+  }
+}
+
+.animate-cloud-drift {
+  animation: cloud-drift linear infinite;
+}
+
+@keyframes bird-fly {
+  from {
+    transform: translateX(-5vw) scale(var(--bird-scale, 1));
+  }
+  to {
+    transform: translateX(105vw) scale(var(--bird-scale, 1));
+  }
+}
+
+.animate-bird-fly {
+  animation: bird-fly linear infinite;
+}
+
+.bird {
+  width: 28px;
+  height: 14px;
+  color: rgba(63, 63, 70, 0.62);
+}
+
+.bird-wing,
+.bird-body {
+  position: absolute;
+  display: block;
+}
+
+.bird-wing {
+  top: 2px;
+  width: 15px;
+  height: 9px;
+  border-top: 2px solid currentColor;
+  border-radius: 999px 999px 0 0;
+  transform-origin: bottom center;
+  animation: bird-flap 0.72s ease-in-out infinite;
+}
+
+.bird-wing-left {
+  left: 1px;
+  transform: rotate(18deg);
+}
+
+.bird-wing-right {
+  right: 1px;
+  transform: rotate(-18deg);
+  animation-delay: -0.36s;
+}
+
+.bird-body {
+  left: 12px;
+  top: 7px;
+  width: 4px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+@keyframes bird-flap {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 3px;
+  }
+}
+
+@keyframes fog-drift {
+  0%,
+  100% {
+    transform: translateX(-4%);
+  }
+  50% {
+    transform: translateX(4%);
+  }
+}
+
+.animate-fog-drift {
+  animation: fog-drift ease-in-out infinite;
+}
+
+@keyframes sky-hue {
+  0%,
+  100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(12deg);
+  }
+}
+
+.animate-sky-hue {
+  animation: sky-hue 60s ease-in-out infinite;
+}
+
+@keyframes sun-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-sun-pulse {
+  animation: sun-pulse 12s ease-in-out infinite;
+}
+
+@keyframes dust-float {
+  0% {
+    transform: translateY(0);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translateY(-30px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.1;
+  }
+}
+
+.animate-dust-float {
+  animation: dust-float ease-in-out infinite;
+}
