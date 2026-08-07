@@ -313,12 +313,12 @@ export default function PaintBrushGlow() {
       <canvas
         ref={pinkCanvasRef}
         className="pointer-events-none absolute inset-0 z-5 h-full w-full transition-opacity duration-500"
-        style={{ opacity: active ? 0.9 : 0 }}
+        style={{ opacity: active ? 0.5 : 0 }}
       />
       <canvas
         ref={yellowCanvasRef}
         className="pointer-events-none absolute inset-0 z-5 h-full w-full transition-opacity duration-500"
-        style={{ opacity: active ? 0.9 : 0 }}
+        style={{ opacity: active ? 0.5 : 0 }}
       />
     </>
   );

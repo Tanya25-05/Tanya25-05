@@ -5,28 +5,127 @@ import { useEffect, useRef } from "react";
 import EnamelBadge from "./EnamelBadge";
 import SectionHeading from "./SectionHeading";
 
+// react-icons' bundled simple-icons set has no Adobe brand icons at
+// all (Illustrator, Photoshop, etc.) — Adobe has a documented history
+// of sending takedown requests over its marks, so simple-icons
+// dropped them entirely. There's no package with a real Illustrator
+// glyph to pull in, so this stays a hand-built "Ai" mark instead, at
+// least matching the app icon's actual dark-badge/orange-text
+// convention rather than a wrong library import that crashes at
+// render time (which is what SiAdobeillustrator — a name that
+// doesn't exist in the package — just did).
 function IllustratorIcon() {
   return (
-    <span className="font-serif text-[13px] font-bold italic text-white select-none">
+    <span
+      className="select-none"
+      style={{
+        fontFamily: "'Arial Black', Arial, sans-serif",
+        fontWeight: 900,
+        fontSize: 22,
+        color: "#f2811d",
+        WebkitTextStroke: "1.4px #7a3d00",
+        letterSpacing: "-0.03em",
+      }}
+    >
       Ai
     </span>
   );
 }
 
+// A diagonal artist's brush, like a real enamel pin: dark maroon
+// handle with a glossy highlight stripe, a brass ferrule band, and a
+// pointed dark-brown bristle tip — built from simple vertical shapes
+// then rotated 45°, rather than the previous flat, hard-to-read glyph.
 function PaintbrushIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+      <g transform="rotate(45 16 16)">
+        <rect x="13.5" y="15" width="5" height="15" rx="2.5" fill="#5c1a2b" />
+        <rect x="14.4" y="16" width="1.1" height="12.5" rx="0.55" fill="#e69bb0" opacity="0.7" />
+        <rect x="12.5" y="9.5" width="7" height="6" rx="1" fill="#d4af37" />
+        <rect x="12.5" y="9.5" width="7" height="1.6" rx="0.8" fill="#f4d878" />
+        <path d="M13 9.5c0-2.8 1.3-5.7 3-7.5 1.7 1.8 3 4.7 3 7.5h-6z" fill="#3b2412" />
+      </g>
+    </svg>
+  );
+}
+
+function FigmaIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
       <path
-        d="M14.5 3.5c1.4-1.4 3.6-1.4 5 0s1.4 3.6 0 5l-6.8 6.8-5-5 6.8-6.8z"
-        fill="#e8b978"
+        d="M8 24c2.21 0 4-1.79 4-4v-4H8c-2.21 0-4 1.79-4 4s1.79 4 4 4z"
+        fill="#0ACF83"
+        stroke="#d4af37"
+        strokeWidth="0.6"
       />
       <path
-        d="M12.7 9.3l-2.4 2.4c-.6 2.4-2 4.1-4.3 5-1 .4-2 .5-3 .5 1-.6 1.7-1.6 2-2.7.3-1 0-1.8-.6-2.4a3.3 3.3 0 0 1 3-3.8c1-.1 2 .1 2.9-.6l2.4-2.4 2 2z"
-        fill="#ffd9ec"
+        d="M4 12c0-2.21 1.79-4 4-4h4v8H8c-2.21 0-4-1.79-4-4z"
+        fill="#A259FF"
+        stroke="#d4af37"
+        strokeWidth="0.6"
+      />
+      <path
+        d="M4 4c0-2.21 1.79-4 4-4h4v8H8C5.79 8 4 6.21 4 4z"
+        fill="#F24E1E"
+        stroke="#d4af37"
+        strokeWidth="0.6"
+      />
+      <path
+        d="M12 0h4c2.21 0 4 1.79 4 4s-1.79 4-4 4h-4V0z"
+        fill="#FF7262"
+        stroke="#d4af37"
+        strokeWidth="0.6"
+      />
+      <path
+        d="M20 12c0 2.21-1.79 4-4 4s-4-1.79-4-4 1.79-4 4-4 4 1.79 4 4z"
+        fill="#1ABCFE"
+        stroke="#d4af37"
+        strokeWidth="0.6"
       />
     </svg>
   );
 }
+
+// Floated inside the scrollable track alongside the collage, at
+// positions picked to sit in the gaps between the illustration items
+// rather than on the fixed right margin — so they're something you
+// come across while panning around, not a static sidebar.
+const toolBadges = [
+  {
+    key: "illustrator",
+    top: "38%",
+    left: "22%",
+    tint: "#000000",
+    rotate: -8,
+    size: 54,
+    href: "https://www.adobe.com/products/illustrator.html",
+    label: "Adobe Illustrator",
+    icon: <IllustratorIcon />,
+  },
+  {
+    key: "figma",
+    top: "80%",
+    left: "58%",
+    tint: "#000000",
+    rotate: 6,
+    size: 54,
+    href: "https://www.figma.com/",
+    label: "Figma",
+    icon: <FigmaIcon />,
+  },
+  {
+    key: "brush",
+    top: "35%",
+    left: "78%",
+    tint: "#fff3c4",
+    rotate: 10,
+    size: 44,
+    href: null,
+    label: "Hyperrealistic Brush",
+    icon: <PaintbrushIcon />,
+  },
+];
 
 // A wide track (170% of the panel) holding the collage, sitting inside
 // a native horizontally-scrollable panel — real, always-functional
@@ -100,35 +199,48 @@ export default function Illustrations() {
 
     const target = { x: 0 };
     const smooth = { x: 0 };
+    // Below this, the pan is close enough to its target that another
+    // frame of scrollLeft writes wouldn't be visible — stop the loop
+    // instead of forcing a scroll/layout recompute 60 times a second
+    // forever, including while the mouse sits still doing nothing.
+    const SETTLE_EPSILON = 0.3;
 
     const handleMove = (e: MouseEvent) => {
       const rect = panel.getBoundingClientRect();
       const normX = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2); // -1..1
       const maxRangeX = (track.scrollWidth - panel.clientWidth) / 2;
       target.x = normX * maxRangeX;
+      ensureTicking();
     };
     const handleLeave = () => {
       target.x = 0;
+      ensureTicking();
     };
 
     panel.addEventListener("mousemove", handleMove);
     panel.addEventListener("mouseleave", handleLeave);
 
-    let frameId: number;
+    let frameId: number | null = null;
     const tick = () => {
       smooth.x += (target.x - smooth.x) * LERP_X;
       const centerX = (track.scrollWidth - panel.clientWidth) / 2;
       panel.scrollLeft = centerX + smooth.x;
-      frameId = requestAnimationFrame(tick);
+      if (Math.abs(target.x - smooth.x) > SETTLE_EPSILON) {
+        frameId = requestAnimationFrame(tick);
+      } else {
+        frameId = null;
+      }
     };
-    frameId = requestAnimationFrame(tick);
+    const ensureTicking = () => {
+      if (frameId === null) frameId = requestAnimationFrame(tick);
+    };
 
     return () => {
       window.removeEventListener("resize", centerScroll);
       panel.removeEventListener("wheel", onWheel);
       panel.removeEventListener("mousemove", handleMove);
       panel.removeEventListener("mouseleave", handleLeave);
-      cancelAnimationFrame(frameId);
+      if (frameId !== null) cancelAnimationFrame(frameId);
     };
   }, []);
 
@@ -153,26 +265,6 @@ export default function Illustrations() {
         <SectionHeading index="03" variant="dark">
           Designing
         </SectionHeading>
-      </div>
-
-      {/* tool badges — pinned to the panel's right margin */}
-      <div className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 flex-col items-center gap-4 z-30">
-        <a
-          href="https://www.adobe.com/products/illustrator.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Adobe Illustrator"
-          className="animate-float"
-        >
-          <EnamelBadge tint="#ff9a3c" rotate={-8} size={44}>
-            <IllustratorIcon />
-          </EnamelBadge>
-        </a>
-        <div className="animate-float" style={{ animationDelay: "0.8s" }}>
-          <EnamelBadge tint="#fff3c4" rotate={10} size={44}>
-            <PaintbrushIcon />
-          </EnamelBadge>
-        </div>
       </div>
 
       {/* the scrollable wide canvas — overflow-y-hidden and
@@ -211,6 +303,29 @@ export default function Illustrations() {
               />
             </div>
           ))}
+
+          {toolBadges.map((badge, i) => {
+            const content = (
+              <EnamelBadge tint={badge.tint} rotate={badge.rotate} size={badge.size} ring="#d4af37">
+                {badge.icon}
+              </EnamelBadge>
+            );
+            return (
+              <div
+                key={badge.key}
+                className="absolute animate-float z-20"
+                style={{ top: badge.top, left: badge.left, animationDelay: `${i * 0.8}s` }}
+              >
+                {badge.href ? (
+                  <a href={badge.href} target="_blank" rel="noopener noreferrer" aria-label={badge.label}>
+                    {content}
+                  </a>
+                ) : (
+                  <div aria-label={badge.label}>{content}</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -221,7 +336,12 @@ export default function Illustrations() {
         <span className="font-mono text-[11px] tracking-[0.4em] text-zinc-400 uppercase mb-2">
           The
         </span>
-        <span className="font-serif italic text-6xl sm:text-7xl lg:text-8xl leading-none bg-linear-to-r from-pink-400 to-amber-300 bg-clip-text text-transparent">
+        {/* leading-none clipped the italic serif "g"'s descender —
+            line-height:1 doesn't leave room for it, and with
+            bg-clip-text there's no visible box to notice the cutoff
+            until it's rendered. A touch of extra line-height and
+            bottom padding gives the descender room to actually show. */}
+        <span className="font-serif italic text-6xl sm:text-7xl lg:text-8xl leading-[1.2] pb-2 bg-linear-to-r from-pink-400 to-amber-300 bg-clip-text text-transparent">
           Designs
         </span>
       </div>

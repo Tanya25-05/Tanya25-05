@@ -42,27 +42,29 @@ export default function ProfileSection() {
           <Reveal>
             <div className="text-zinc-600 text-sm leading-relaxed max-w-lg space-y-4">
               <p>
-                I&apos;m Tanya, an AI engineer who builds systems that reason,
-                plan, and act — not just chat. My focus is agentic workflows:
-                architectures where language models call tools, coordinate with
-                other agents, and carry state across multi-step tasks to get
-                real work done, instead of returning a single one-shot answer.
+                I&apos;m Tanya, an M.Tech graduate in Artificial Intelligence.
+                Lately I&apos;ve been going deep on physical AI — how models
+                perceive and act in the real world, not just generate text —
+                alongside agentic workflows: orchestration, tool-calling, and
+                getting multiple agents to coordinate on a task without
+                falling apart.
               </p>
               <p>
-                Most of my time goes into the scaffolding around the model
-                itself — orchestration logic, memory, tool integrations, and
-                evaluation loops that catch failures before they reach a user.
-                That&apos;s the unglamorous plumbing that decides whether an
-                agent is actually reliable in production or just an impressive
-                demo, and I care a lot about getting it right.
+                Alongside that, I spend a lot of time thinking at the
+                system-design level — how the pieces around a model (queues,
+                caching, service boundaries, observability) hold up under real
+                load, since that&apos;s usually what decides whether something
+                ships or stays a notebook. My internships at DRDO and RoboMQ
+                mostly lived in that space: pipelines, monitoring, and the
+                unglamorous plumbing that makes a system actually reliable.
               </p>
               <p>
-                Outside of agent architecture, I&apos;m endlessly curious about
-                how far autonomous systems can go before a human needs to stay
-                in the loop, and I like keeping my hands on the tools I build —
-                small experiments and side projects, not just theory. Above
-                all, I love connecting to humans — the best systems still get
-                built around real conversations.
+                Outside of that, I like keeping my hands on things — small
+                experiments and side projects, not just theory. I&apos;m still
+                learning a lot of this as I go, and I&apos;d rather be honest
+                about that than pretend otherwise. I also love connecting with
+                people — the best systems still get built around real
+                conversations.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 mt-6">

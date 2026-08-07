@@ -23,6 +23,14 @@ const experience = [
       "Reduced duplicate alerts by 50% by refining alert rules and suppressing redundant notifications across NATs.",
     ],
   },
+  {
+    role: "Software Development Intern",
+    company: "Aditya Birla Group",
+    duration: "March 2023 — July 2023",
+    points: [
+      "Built a visitor entrance feature for a residential security app, letting visitors request gate entry that a resident verifies and approves before access is granted.",
+    ],
+  },
 ];
 
 const education = [
