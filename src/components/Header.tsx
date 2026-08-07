@@ -27,9 +27,9 @@ export default function Header() {
           <span className="font-bold">Portfolio</span>{" "}
           <span className="italic text-zinc-400">/ 2026 Edition</span>
         </Link>
-        <span className="text-zinc-300">·</span>
+        <span className="text-pink-500">·</span>
         <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-zinc-400">
-          Bangalore → Remote, Globally
+          Bangalore <span className="text-pink-500">→</span> Remote, Globally
         </span>
       </nav>
     </header>
