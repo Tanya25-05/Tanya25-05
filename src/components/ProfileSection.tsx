@@ -1,6 +1,15 @@
+"use client";
+
 import Image from "next/image";
 import Reveal from "./Reveal";
 import SectionHeading from "./SectionHeading";
+import SpotlightText from "./SpotlightText";
+
+const ABOUT_PARAGRAPHS = [
+  "I'm Tanya, an M.Tech graduate in Artificial Intelligence, currently exploring physical AI — how models perceive and act in the real world — alongside agentic workflows: orchestration, tool-calling, and getting multiple agents to coordinate without falling apart.",
+  "I also think a lot at the system-design level — how queues, caching, and observability hold up under real load, since that's usually what decides whether something ships. My internships at DRDO and RoboMQ lived in that space: pipelines, monitoring, and the plumbing that keeps a system reliable.",
+  "Outside of that, I like keeping my hands on things — small experiments, not just theory. I'd rather be honest about what I'm still learning than pretend otherwise, and I love connecting with people; the best systems still get built around real conversations.",
+];
 
 const skills = [
   "Python",
@@ -9,8 +18,7 @@ const skills = [
   "LLMs",
   "Prompt Engineering",
   "Docker",
-  "Kubernetes",
-  "AWS",
+  "Agentic AI",
 ];
 
 export default function ProfileSection() {
@@ -32,7 +40,9 @@ export default function ProfileSection() {
                 alt="Tanya Verma"
                 fill
                 sizes="192px"
-                className="object-cover"
+                className="object-cover select-none"
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
               />
             </div>
           </div>
@@ -40,32 +50,12 @@ export default function ProfileSection() {
         <div>
           <SectionHeading index="01">About</SectionHeading>
           <Reveal>
-            <div className="text-zinc-600 text-sm leading-relaxed max-w-lg space-y-4">
-              <p>
-                I&apos;m Tanya, an M.Tech graduate in Artificial Intelligence.
-                Lately I&apos;ve been going deep on physical AI — how models
-                perceive and act in the real world, not just generate text —
-                alongside agentic workflows: orchestration, tool-calling, and
-                getting multiple agents to coordinate on a task without
-                falling apart.
-              </p>
-              <p>
-                Alongside that, I spend a lot of time thinking at the
-                system-design level — how the pieces around a model (queues,
-                caching, service boundaries, observability) hold up under real
-                load, since that&apos;s usually what decides whether something
-                ships or stays a notebook. My internships at DRDO and RoboMQ
-                mostly lived in that space: pipelines, monitoring, and the
-                unglamorous plumbing that makes a system actually reliable.
-              </p>
-              <p>
-                Outside of that, I like keeping my hands on things — small
-                experiments and side projects, not just theory. I&apos;m still
-                learning a lot of this as I go, and I&apos;d rather be honest
-                about that than pretend otherwise. I also love connecting with
-                people — the best systems still get built around real
-                conversations.
-              </p>
+            <div className="text-sm leading-relaxed max-w-lg space-y-4">
+              {ABOUT_PARAGRAPHS.map((text) => (
+                <SpotlightText key={text} baseColor="#52525b">
+                  {text}
+                </SpotlightText>
+              ))}
             </div>
             <div className="flex flex-wrap gap-2 mt-6">
               {skills.map((s) => (

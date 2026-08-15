@@ -190,6 +190,49 @@ export default function Illustrations() {
     };
     panel.addEventListener("wheel", onWheel, { passive: false });
 
+    // Native touch-action can't express "prefer horizontal, but still
+    // let vertical escape" — touch-action:pan-x blocks vertical
+    // panning outright (that was the earlier "trapped, can't scroll
+    // out" bug), while touch-action:auto lets the page's own vertical
+    // scroll win most real-world diagonal-ish swipes before this
+    // panel's horizontal pan ever engages (a "horizontal lock" from
+    // the other direction — swipes that should pan sideways don't).
+    // Deciding per-gesture from the touch's own initial direction is
+    // the only way to get both: mostly-sideways swipes pan the panel,
+    // mostly-vertical swipes are left completely alone for the page.
+    let touchStart: { x: number; y: number } | null = null;
+    let touchIsHorizontal: boolean | null = null;
+    const DIRECTION_LOCK_PX = 8;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      touchStart = { x: t.clientX, y: t.clientY };
+      touchIsHorizontal = null;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchStart) return;
+      const t = e.touches[0];
+      const dx = t.clientX - touchStart.x;
+      const dy = t.clientY - touchStart.y;
+
+      if (touchIsHorizontal === null) {
+        if (Math.hypot(dx, dy) < DIRECTION_LOCK_PX) return;
+        touchIsHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+      if (touchIsHorizontal) {
+        e.preventDefault();
+        panel.scrollLeft -= dx;
+        touchStart = { x: t.clientX, y: t.clientY };
+      }
+    };
+    const onTouchEnd = () => {
+      touchStart = null;
+      touchIsHorizontal = null;
+    };
+    panel.addEventListener("touchstart", onTouchStart, { passive: true });
+    panel.addEventListener("touchmove", onTouchMove, { passive: false });
+    panel.addEventListener("touchend", onTouchEnd, { passive: true });
+
     // The hover auto-pan is a desktop nicety layered on top of always-
     // working native scroll — skip it on touch so it never fights a
     // swipe gesture.
@@ -198,6 +241,9 @@ export default function Illustrations() {
       return () => {
         window.removeEventListener("resize", centerScroll);
         panel.removeEventListener("wheel", onWheel);
+        panel.removeEventListener("touchstart", onTouchStart);
+        panel.removeEventListener("touchmove", onTouchMove);
+        panel.removeEventListener("touchend", onTouchEnd);
       };
     }
 
@@ -242,6 +288,9 @@ export default function Illustrations() {
     return () => {
       window.removeEventListener("resize", centerScroll);
       panel.removeEventListener("wheel", onWheel);
+      panel.removeEventListener("touchstart", onTouchStart);
+      panel.removeEventListener("touchmove", onTouchMove);
+      panel.removeEventListener("touchend", onTouchEnd);
       panel.removeEventListener("mousemove", handleMove);
       panel.removeEventListener("mouseleave", handleLeave);
       if (frameId !== null) cancelAnimationFrame(frameId);
@@ -271,24 +320,20 @@ export default function Illustrations() {
         </SectionHeading>
       </div>
 
-      {/* touch-action was previously pinned to pan-x, on the assumption
-          that a vertical swipe would "fall through" to the page since
-          this element has no vertical scroll capacity (overflow-y-
-          hidden). That assumption was wrong: touch-action:pan-x doesn't
-          mean "let vertical panning chain up" — it means vertical
-          panning is disallowed on this element outright, full stop, no
-          fallback. On mobile that's exactly what "trapped once you
-          scroll in" looks like: every vertical swipe starting over this
-          full-viewport-height panel is simply eaten. touch-auto (the
-          default) lets the browser decide per-axis from actual
-          overflow — horizontal swipes still pan this element (real
-          overflow-x content), vertical swipes have nothing to consume
-          here and correctly chain to the page. The onWheel handler
-          below only ever covered desktop; touch devices never fire
-          wheel events, so this was the one actually gating mobile. */}
+      {/* touch-action history here: pan-x blocked vertical panning
+          outright (the original "trapped, can't scroll out" bug);
+          plain auto let the page's vertical scroll win most real-
+          world diagonal swipes before horizontal panning could ever
+          engage (a "horizontal lock" the other way). touch-pan-y
+          leaves the browser's native, buttery-smooth vertical scroll
+          completely untouched, while the touchstart/touchmove/touchend
+          handlers above take over horizontal panning manually — they
+          look at each gesture's own initial direction and only
+          preventDefault + drive scrollLeft themselves once a swipe is
+          clearly sideways, so neither axis has to fight the other. */}
       <div
         ref={panelRef}
-        className="absolute inset-0 overflow-x-auto overflow-y-hidden touch-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="absolute inset-0 overflow-x-auto overflow-y-hidden touch-pan-y overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <div
           ref={trackRef}
@@ -314,7 +359,9 @@ export default function Illustrations() {
                 alt={item.alt}
                 fill
                 sizes="260px"
-                className="object-contain"
+                className="object-contain select-none"
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
               />
             </div>
           ))}

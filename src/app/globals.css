@@ -22,7 +22,10 @@ html {
 
 html,
 body {
-  cursor: default;
+  /* SpotlightCursor renders the actual pointer everywhere on the site
+     (a solid pink circle) — the native cursor is hidden so there's
+     never a second, competing pointer on screen next to it. */
+  cursor: none;
   /* Site-wide guard: nothing on the page should ever be able to
      introduce a horizontal scrollbar. The Designing section's pan is
      unaffected — it's a nested overflow-x-auto element, a separate
@@ -33,6 +36,64 @@ body {
 ::selection {
   background: #ec4899;
   color: #ffffff;
+}
+
+/* Cursor spotlight on text — a real magnifying-glass effect, not just
+   a color swap. The base text (this element's real children) always
+   stays its normal color. A ::after pseudo-element renders a second,
+   yellow copy of the exact same text via content: attr(data-text) —
+   see SpotlightText.tsx, which is what guarantees that attribute
+   always matches the visible children exactly — positioned exactly
+   over the original and scaled up from the live cursor point
+   (--spotlight-zoom, --spotlight-local-x/-y, all set per-element by
+   SpotlightCursor.tsx since each element has its own local coordinate
+   space). clip-path then only shows a small circle of that enlarged
+   copy around the cursor; outside it the scaled duplicate is clipped
+   away entirely, revealing the normal-sized original underneath.
+   The opaque pink fill lives here, as this pseudo-element's own
+   background, rather than on SpotlightCursor's separate fixed overlay
+   div — a background painted on a *different* element on top (as it
+   used to be) can only ever be translucent or it hides this text
+   completely, which left the fill looking washed out everywhere
+   except right at the crisp border stroke. Painting the fill and the
+   yellow text in the same element/paint step guarantees the text
+   always sits on top of its own backdrop, opaque, filling the whole
+   circle instead of just its rim. */
+.spotlight-text {
+  position: relative;
+  /* Falls back to whatever color the element already had (headings,
+     nav links, etc. — anything SpotlightCursor.tsx auto-tags rather
+     than a call site that explicitly wraps its text in
+     <SpotlightText baseColor="...">). */
+  color: var(--spotlight-base, inherit);
+}
+
+.spotlight-text::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: #ffffff;
+  background: #ec4899;
+  pointer-events: none;
+  z-index: 201;
+  transform: scale(var(--spotlight-zoom, 1));
+  transform-origin: var(--spotlight-local-x, 50%) var(--spotlight-local-y, 50%);
+  /* clip-path is clipped in this element's own local coordinates and
+     *then* the transform above scales that already-clipped result —
+     so the circle that actually ends up on screen is this radius
+     times --spotlight-zoom, not this radius itself. 0.34lh here times
+     the 1.6x zoom lands just over 0.5lh — a touch over one line — so
+     the circle stays close to text size instead of bleeding into the
+     line above/below (which was the "pink cutting out" bug: at the
+     old 1.5lh radius the on-screen circle was ~5 lines tall, spilling
+     into a neighboring paragraph that has no matching duplicated text
+     under it, so the fill just stopped mid-circle at that boundary).
+     The flat +4px on top of that radius has to stay in sync with
+     SpotlightCursor.tsx's matching EXTRA_RADIUS_PX (added to the same
+     pre-zoom radius there, before its own *2*ZOOM) — otherwise this
+     clip and the always-visible dot cursor it's meant to sit flush
+     with drift apart. */
+  clip-path: circle(calc(0.34lh + 4px) at var(--spotlight-local-x, -999px) var(--spotlight-local-y, -999px));
 }
 
 @keyframes float-y {
@@ -186,4 +247,194 @@ body {
 
 .animate-dust-float {
   animation: dust-float ease-in-out infinite;
+}
+
+/* Contact section's ASCII phone — see ContactPhone.tsx for the
+   choreography these get toggled through. */
+
+@keyframes phone-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0% 0 0);
+  }
+}
+
+.animate-phone-draw {
+  animation: phone-draw 1.8s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes dial-spin-once {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(340deg);
+  }
+}
+
+.animate-dial-spin-once {
+  animation: dial-spin-once 0.7s cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
+}
+
+@keyframes receiver-bounce-once {
+  0% {
+    transform: translateY(-6px);
+  }
+  40% {
+    transform: translateY(2px);
+  }
+  70% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-receiver-bounce-once {
+  animation: receiver-bounce-once 0.6s ease-out forwards;
+}
+
+@keyframes button-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.35), 0 0 0 0 rgba(251, 191, 36, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(236, 72, 153, 0), 0 0 0 14px rgba(251, 191, 36, 0);
+  }
+}
+
+.animate-button-pulse {
+  animation: button-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes ascii-shimmer {
+  0% {
+    background-position: 0% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-ascii-shimmer {
+  background-size: 200% 100%;
+  animation: ascii-shimmer 1.3s linear infinite;
+}
+
+@keyframes signal-travel {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(var(--signal-distance, 140px));
+    opacity: 0;
+  }
+}
+
+.animate-signal-travel {
+  animation: signal-travel 1.1s ease-in-out forwards;
+}
+
+@keyframes calling-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-calling-fade {
+  animation: calling-fade 0.5s ease-in-out;
+}
+
+/* "Ring Ring!" cadence — two short pulses per cycle (appear, fade,
+   appear, fade) rather than one steady fade, so it reads as an actual
+   ringing pattern instead of just a single label popping in. */
+@keyframes ring-pulse {
+  0%,
+  50%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25%,
+  75% {
+    opacity: 0.2;
+    transform: scale(0.94);
+  }
+}
+
+.animate-ring-pulse {
+  animation: ring-pulse 0.8s ease-in-out infinite;
+}
+
+/* One "TRR TRR!!" callout at a time around the ringing phone: pops in
+   with a little overshoot, holds, then fades back out — quick (550ms),
+   well inside the much longer BURST_CYCLE_MS gap in ContactPhone.tsx
+   between one ring and the next, so it reads as a paced ring...ring
+   rather than a continuous flicker. `forwards` below is what keeps it
+   sitting at the faded-out (opacity: 0) end state for the rest of
+   that gap instead of snapping back to fully visible once the
+   animation itself finishes but the element is still mounted. */
+@keyframes burst-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-6deg);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.1) rotate(3deg);
+  }
+  30% {
+    transform: scale(1) rotate(0deg);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.55) rotate(5deg);
+  }
+}
+
+.animate-burst-pop {
+  animation: burst-pop 550ms ease-in-out forwards;
+}
+
+/* The button itself gently scales in/out on top of ring-pulse's own
+   text-level pulse above — the whole pill "breathes" while the label
+   inside it separately blinks through the ring cadence. */
+@keyframes button-breathe {
+  0%,
+  100% {
+    transform: rotate(-3deg) scale(1);
+  }
+  50% {
+    transform: rotate(-3deg) scale(1.08);
+  }
+}
+
+.animate-button-breathe {
+  animation: button-breathe 1.6s ease-in-out infinite;
 }

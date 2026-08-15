@@ -1,5 +1,6 @@
 import Reveal from "./Reveal";
 import SectionHeading from "./SectionHeading";
+import Timeline from "./Timeline";
 
 const experience = [
   {
@@ -33,44 +34,6 @@ const experience = [
   },
 ];
 
-const education = [
-  {
-    role: "M.Tech, Artificial Intelligence",
-    company: "Banasthali Vidyapith",
-    duration: "2024 — 2026",
-    points: ["CGPA: 8.93 / 10.0"],
-  },
-  {
-    role: "B.Tech (Honors), Computer Science and Engineering",
-    company: "Rajasthan Technical University",
-    duration: "2020 — 2024",
-    points: ["CGPA: 9.62 / 10.0"],
-  },
-];
-
-function Timeline({ items }: { items: typeof experience }) {
-  return (
-    <div className="relative pl-6 space-y-10 border-l-2 border-pink-100">
-      {items.map((e) => (
-        <div key={e.role + e.company} className="relative">
-          <div className="absolute -left-6.75 top-1 w-3 h-3 rounded-full bg-linear-to-br from-pink-500 to-amber-400 ring-4 ring-white" />
-          <p className="font-mono text-xs tracking-wide text-zinc-500 mb-1">
-            {e.duration}
-          </p>
-          <h3 className="font-semibold text-sm">
-            {e.role} &middot; {e.company}
-          </h3>
-          <ul className="mt-2 space-y-1 text-xs text-zinc-600 list-disc list-inside">
-            {e.points.map((p) => (
-              <li key={p}>{p}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function ExperienceSection() {
   return (
     <section
@@ -82,11 +45,6 @@ export default function ExperienceSection() {
       <SectionHeading index="04">Experience</SectionHeading>
       <Reveal>
         <Timeline items={experience} />
-
-        <h3 className="font-mono text-xs tracking-[0.2em] text-zinc-500 uppercase mt-12 mb-6">
-          Education
-        </h3>
-        <Timeline items={education} />
       </Reveal>
     </section>
   );

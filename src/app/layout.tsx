@@ -4,6 +4,8 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SocialDock from "@/components/SocialDock";
+import SpotlightCursor from "@/components/SpotlightCursor";
+import StatusClock from "@/components/StatusClock";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -34,6 +36,8 @@ export default function RootLayout({
         <main className="flex-1 flex flex-col">{children}</main>
         <Footer />
         <SocialDock />
+        <StatusClock />
+        <SpotlightCursor />
       </body>
     </html>
   );

@@ -7,11 +7,7 @@ import { useEffect, useRef, useState } from "react";
 // faster/farther the cursor moves between frames, the more it
 // elongates — which is what makes a pause read as a dot but a swipe
 // read as a directional brush stroke.
-// Kept small relative to GLOW_BLUR on purpose — a wide halo around a
-// small crisp core reads as "glowing brush tip"; a wide halo around a
-// brush that's already large starts to look like one continuous soft
-// cloud once strokes overlap, hiding the actual stroke shape.
-const BRUSH_SIZE = 42;
+const BRUSH_SIZE = 58;
 const STAMP_ALPHA = 0.7;
 const BRUSH_POOL_SIZE = 6;
 const STRETCH_PER_PX = 0.09;

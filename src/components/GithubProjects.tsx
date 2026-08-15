@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import SpotlightText from "./SpotlightText";
 
 const GITHUB_USERNAME = "Tanya25-05";
 
@@ -165,9 +166,9 @@ export default function GithubProjects() {
                 {override?.title ?? repo.name}
               </h3>
               <div className="w-10 h-px bg-pink-300 mb-3" aria-hidden />
-              <p className="text-sm leading-6 text-zinc-600">
+              <SpotlightText className="text-sm leading-6" baseColor="#52525b">
                 {override?.description || repo.description || "No description provided."}
-              </p>
+              </SpotlightText>
             </a>
             {override?.url && (
               <a
