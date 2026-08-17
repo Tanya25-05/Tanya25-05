@@ -207,10 +207,21 @@ const CHARS = ["░", "▒", "▓", "▓", "█"];
 // Rises 0→1 across the edge's anti-aliased band (rim reads as solid),
 // then falls 1→0 across INNER_FADE moving further inward — a ridge,
 // not a plateau, so density peaks right at the silhouette's rim and
-// empties back out toward its center.
+// empties back out toward its center. Only right for a shape with no
+// holes of its own (the phone body): applied to the dial too, its
+// digit-hole ring sat right in the ridge's still-bright zone while the
+// fade emptied out the disc's actual center — an outer rim, a
+// hole-punctuated band, and a blank middle read as three separate
+// rims instead of one disc with holes in it.
 function fillRatio(insideDist: number): number {
   if (insideDist <= EDGE_SOFTNESS) return insideDist / EDGE_SOFTNESS;
   return Math.max(0, 1 - (insideDist - EDGE_SOFTNESS) / INNER_FADE);
+}
+// Solid instead: rises 0→1 across the same anti-aliased edge band, then
+// just stays fully solid all the way in — used for the dial, where any
+// "emptying out" toward the center is exactly what read as extra rims.
+function solidFillRatio(insideDist: number): number {
+  return Math.min(insideDist / EDGE_SOFTNESS, 1);
 }
 function shadeChar(ratio: number): string {
   if (ratio < 0.15) return CHARS[0];
@@ -220,7 +231,7 @@ function shadeChar(ratio: number): string {
   return CHARS[4];
 }
 
-function generateLayer(distFn: (px: number, py: number) => number): string {
+function generateLayer(distFn: (px: number, py: number) => number, solid = false): string {
   const lines: string[] = [];
   for (let row = 0; row < PHONE_ROWS; row++) {
     let line = "";
@@ -228,7 +239,7 @@ function generateLayer(distFn: (px: number, py: number) => number): string {
       const px = col;
       const py = row * ROW_SCALE;
       const d = distFn(px, py);
-      const ratio = d > 0 ? fillRatio(d) : 0;
+      const ratio = d > 0 ? (solid ? solidFillRatio(d) : fillRatio(d)) : 0;
       line += ratio > 0 ? shadeChar(ratio) : " ";
     }
     lines.push(line);
@@ -258,7 +269,7 @@ export function generatePhoneLayers(): PhoneLayers {
   });
   return {
     base: generateLayer(baseDistance),
-    dial: generateLayer(dialDistance),
+    dial: generateLayer(dialDistance, true),
     receiver: generateLayer(receiverDistance),
     digits,
   };

@@ -206,7 +206,17 @@ export default function Illustrations() {
     // particular browser's touch-action behavior.
     let touchStart: { x: number; y: number } | null = null;
     let touchIsHorizontal: boolean | null = null;
-    const DIRECTION_LOCK_PX = 8;
+    const DIRECTION_LOCK_PX = 12;
+    // A real thumb swipe is rarely perfectly vertical — some sideways
+    // drift is normal even when someone means to scroll the page. A
+    // plain dx > dy comparison locked onto "horizontal" (panning the
+    // carousel) far too easily on that drift, silently eating the
+    // vertical scroll for the rest of the gesture — which is exactly
+    // what "stuck, can't scroll up/down" was. Requiring dx to clearly
+    // beat dy, not just barely, biases ambiguous swipes toward the
+    // page scroll instead — getting stuck is a much worse outcome than
+    // occasionally needing a more deliberate sideways swipe to pan.
+    const HORIZONTAL_BIAS = 1.4;
 
     const onTouchStart = (e: TouchEvent) => {
       const t = e.touches[0];
@@ -221,7 +231,7 @@ export default function Illustrations() {
 
       if (touchIsHorizontal === null) {
         if (Math.hypot(dx, dy) < DIRECTION_LOCK_PX) return;
-        touchIsHorizontal = Math.abs(dx) > Math.abs(dy);
+        touchIsHorizontal = Math.abs(dx) > Math.abs(dy) * HORIZONTAL_BIAS;
       }
       e.preventDefault();
       if (touchIsHorizontal) {
