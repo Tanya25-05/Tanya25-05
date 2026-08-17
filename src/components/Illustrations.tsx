@@ -186,7 +186,15 @@ export default function Illustrations() {
     // page's own vertical scroll, so it can never get captured here.
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      window.scrollBy(0, e.deltaY);
+      // behavior: "instant" is what actually matters here — html has
+      // scroll-behavior: smooth set globally (for anchor-link nav), so
+      // a plain scrollBy() inherits that and animates instead of
+      // jumping straight to the target position. Fine for one call,
+      // but a rapid burst of them (every wheel tick, or every
+      // touchmove below) queues up overlapping smooth animations that
+      // fight each other — which is what read as slow/stuck compared
+      // to every other section's native scroll.
+      window.scrollBy({ top: e.deltaY, behavior: "instant" });
     };
     panel.addEventListener("wheel", onWheel, { passive: false });
 
@@ -237,7 +245,12 @@ export default function Illustrations() {
       if (touchIsHorizontal) {
         panel.scrollLeft -= dx;
       } else {
-        window.scrollBy(0, -dy);
+        // See onWheel above for why behavior: "instant" matters — this
+        // fires on every touchmove (far more often than wheel ticks),
+        // so without it the inherited scroll-behavior: smooth queued
+        // up a new animated scroll dozens of times a second, unable to
+        // keep up with the finger at all.
+        window.scrollBy({ top: -dy, behavior: "instant" });
       }
       touchStart = { x: t.clientX, y: t.clientY };
     };
