@@ -191,15 +191,19 @@ export default function Illustrations() {
     panel.addEventListener("wheel", onWheel, { passive: false });
 
     // Native touch-action can't express "prefer horizontal, but still
-    // let vertical escape" — touch-action:pan-x blocks vertical
-    // panning outright (that was the earlier "trapped, can't scroll
-    // out" bug), while touch-action:auto lets the page's own vertical
-    // scroll win most real-world diagonal-ish swipes before this
-    // panel's horizontal pan ever engages (a "horizontal lock" from
-    // the other direction — swipes that should pan sideways don't).
-    // Deciding per-gesture from the touch's own initial direction is
-    // the only way to get both: mostly-sideways swipes pan the panel,
-    // mostly-vertical swipes are left completely alone for the page.
+    // let vertical escape": touch-action:pan-x blocked vertical panning
+    // outright, and touch-action:pan-y (letting the browser handle Y
+    // "natively") relied on that gesture chaining up to the document
+    // once it saw the panel itself has no vertical scroll room
+    // (overflow-y:hidden) — which is exactly the "stuck, can't scroll
+    // out of the section" bug, since not every mobile browser chains a
+    // pan-y gesture off an element that was never a real Y scrollport
+    // to begin with. Deciding per-gesture from the touch's own initial
+    // direction, then manually driving *both* axes ourselves — the
+    // page's own scrollBy for a vertical swipe, exactly like the wheel
+    // handler above already does — removes that dependency on native
+    // chaining entirely, so escaping the section can't get stuck on a
+    // particular browser's touch-action behavior.
     let touchStart: { x: number; y: number } | null = null;
     let touchIsHorizontal: boolean | null = null;
     const DIRECTION_LOCK_PX = 8;
@@ -219,11 +223,13 @@ export default function Illustrations() {
         if (Math.hypot(dx, dy) < DIRECTION_LOCK_PX) return;
         touchIsHorizontal = Math.abs(dx) > Math.abs(dy);
       }
+      e.preventDefault();
       if (touchIsHorizontal) {
-        e.preventDefault();
         panel.scrollLeft -= dx;
-        touchStart = { x: t.clientX, y: t.clientY };
+      } else {
+        window.scrollBy(0, -dy);
       }
+      touchStart = { x: t.clientX, y: t.clientY };
     };
     const onTouchEnd = () => {
       touchStart = null;
@@ -322,18 +328,22 @@ export default function Illustrations() {
 
       {/* touch-action history here: pan-x blocked vertical panning
           outright (the original "trapped, can't scroll out" bug);
-          plain auto let the page's vertical scroll win most real-
-          world diagonal swipes before horizontal panning could ever
-          engage (a "horizontal lock" the other way). touch-pan-y
-          leaves the browser's native, buttery-smooth vertical scroll
-          completely untouched, while the touchstart/touchmove/touchend
-          handlers above take over horizontal panning manually — they
-          look at each gesture's own initial direction and only
-          preventDefault + drive scrollLeft themselves once a swipe is
-          clearly sideways, so neither axis has to fight the other. */}
+          plain auto let the page's vertical scroll win most real-world
+          diagonal swipes before horizontal panning could ever engage (a
+          "horizontal lock" the other way); pan-y handed vertical swipes
+          to the browser's native handling, which on some mobile
+          browsers never chained up to the document (this panel has no
+          vertical scroll room of its own) and reintroduced the
+          "trapped" bug from a different angle. touch-none hands *both*
+          axes to the touchstart/touchmove/touchend handlers above,
+          which decide from each gesture's own initial direction and
+          then drive either scrollLeft (sideways) or the page's own
+          window.scrollBy (vertical) themselves — no native chaining
+          involved, so there's nothing left for a particular browser to
+          get stuck on. */}
       <div
         ref={panelRef}
-        className="absolute inset-0 overflow-x-auto overflow-y-hidden touch-pan-y overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="absolute inset-0 overflow-x-auto overflow-y-hidden touch-none overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <div
           ref={trackRef}

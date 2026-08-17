@@ -1,11 +1,4 @@
-const navLinks = [
-  { page: "01", href: "#about", label: "About" },
-  { page: "02", href: "#projects", label: "Projects" },
-  { page: "03", href: "#designing", label: "Designing" },
-  { page: "04", href: "#experience", label: "Experience" },
-  { page: "05", href: "#education", label: "Education" },
-  { page: "06", href: "#contact", label: "Contact" },
-];
+import { navLinks } from "./navLinks";
 
 // Editorial "table of contents" panel, sitting beside the hero
 // headline on wide screens. Unlike HeroText it's given its own z-25

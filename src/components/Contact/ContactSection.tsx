@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import SocialIcons from "../SocialIcons";
 import SpotlightText from "../SpotlightText";
@@ -67,16 +68,30 @@ export default function ContactSection() {
   return (
     <div
       ref={triggerRef}
-      className="mx-auto grid w-full items-center justify-items-center gap-x-10 gap-y-8 transition-[grid-template-columns] duration-700 ease-out md:justify-items-stretch"
-      style={{ gridTemplateColumns: revealed ? "1fr auto" : "0fr auto" }}
+      // grid-cols-1 below is what makes this stack on mobile — the
+      // two-column "0fr auto" / "1fr auto" trick (used to grow the
+      // content column in from nothing on reveal) only ever applies at
+      // md+ via the arbitrary-value class; setting it through
+      // style.gridTemplateColumns instead used to apply it at every
+      // width, forcing a cramped two-column layout on phones no matter
+      // what grid-cols-1 said.
+      className="mx-auto grid w-full grid-cols-1 items-center justify-items-center gap-x-10 gap-y-8 transition-[grid-template-columns] duration-700 ease-out md:justify-items-stretch md:grid-cols-(--contact-cols)"
+      style={{ "--contact-cols": revealed ? "1fr auto" : "0fr auto" } as CSSProperties}
     >
       <div
-        className={`overflow-hidden transition-all duration-700 ease-out ${
-          revealed ? "opacity-100" : "pointer-events-none w-0 -translate-x-4 opacity-0"
+        // overflow-hidden only while collapsed (w-0, pre-reveal) — it's
+        // what hides the not-yet-revealed content, but left on
+        // permanently it also clips the cursor magnifier's scaled-up
+        // ::after (see globals.css's .spotlight-text::after) any time
+        // it extends past this box's own edges, which is what made the
+        // hover effect look broken specifically on this section once
+        // revealed.
+        className={`transition-all duration-700 ease-out ${
+          revealed ? "overflow-visible opacity-100" : "overflow-hidden pointer-events-none w-0 -translate-x-4 opacity-0"
         } flex flex-col items-center text-center md:items-start md:text-left`}
       >
         <SpotlightText
-          className="mb-6 whitespace-nowrap font-serif italic text-2xl"
+          className="mb-6 font-serif italic text-xl sm:whitespace-nowrap sm:text-2xl"
           baseColor="#3f3f46"
         >
           Let&apos;s work together.

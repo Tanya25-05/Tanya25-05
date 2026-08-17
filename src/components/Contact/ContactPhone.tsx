@@ -8,21 +8,27 @@ import TrrBurst, { type BurstTint } from "./TrrBurst";
 // same as Hero.tsx hoisting its mountain layers to module scope.
 const LAYERS = generatePhoneLayers();
 
-// All four corners, touching the phone's own silhouette rather than
-// floating off away from it, alternating tint around the loop so
-// consecutive spawns are never the same color. Percentages are
-// relative to the phone's bounding box (the ascii drawing is `w-fit`).
+// Top-right only, touching the phone's own silhouette rather than
+// floating off away from it. Two entries at the same spot rather than
+// one so the three back-to-back spawns still alternate tint instead
+// of repeating the same color every time. Percentages are relative to
+// the phone's bounding box (the ascii drawing is `w-fit`).
 const BURST_SLOTS: { top: string; left: string; tint: BurstTint }[] = [
-  { top: "-4%", left: "-6%", tint: "orange" }, // top-left
+  { top: "-4%", left: "90%", tint: "orange" }, // top-right
   { top: "-4%", left: "90%", tint: "pink" }, // top-right
-  { top: "90%", left: "86%", tint: "orange" }, // bottom-right
-  { top: "90%", left: "-6%", tint: "pink" }, // bottom-left
 ];
-// Matches the burst-pop animation's own duration (globals.css)
-// exactly, so the next callout's pop-in starts right as the previous
-// one's pop-out finishes — back-to-back with no dead gap between them.
-const BURST_CYCLE_MS = 550;
-const BURST_TOTAL_MS = 6800;
+// BURST_DISPLAY_MS has to match the burst-pop animation's own duration
+// (globals.css) — how long one callout is actually visible for. A
+// further BURST_GAP_MS of nothing (the previous one already faded out
+// and is holding at opacity: 0 — see that animation's `forwards`)
+// plays before the next one pops in, so it reads as a paced
+// ring...ring...ring rather than a continuous flicker.
+const BURST_DISPLAY_MS = 1000;
+const BURST_GAP_MS = 500;
+const BURST_CYCLE_MS = BURST_DISPLAY_MS + BURST_GAP_MS;
+// Exactly three callouts per click, then stop — not an open-ended
+// flurry for as long as the phone happens to stay in "ringing".
+const BURST_COUNT = 3;
 
 export type PhonePhase =
   | "idle"
@@ -83,31 +89,48 @@ export default function ContactPhone({ phase, onActivate }: ContactPhoneProps) {
   // Driven by clickPulse rather than `phase` — phase only ever passes
   // through "ringing" once (the state machine is one-directional, and
   // stays on "revealed" forever after), but the callouts should fire
-  // every time the phone is clicked, including clicks after it's
-  // already been revealed. Each click bumps clickPulse, which
-  // restarts this effect regardless of what `phase` is doing.
+  // on clicks after it's already been revealed too. Each click bumps
+  // clickPulse, which restarts this effect regardless of what `phase`
+  // is doing. The very first click (clickPulse === 1, the one that
+  // actually answers the call) is skipped on purpose — the callouts
+  // start from the click after that, not the first one.
   const [burst, setBurst] = useState<{ slot: number; key: number } | null>(null);
   const [clickPulse, setClickPulse] = useState(0);
   useEffect(() => {
-    if (clickPulse === 0) return;
+    if (clickPulse <= 1) return;
     let slot = 0;
     let key = 0;
+    let count = 0;
     const spawn = () => {
+      count += 1;
       key += 1;
       setBurst({ slot, key });
       slot = (slot + 1) % BURST_SLOTS.length;
+      if (count >= BURST_COUNT) clearInterval(id);
     };
     spawn();
     const id = setInterval(spawn, BURST_CYCLE_MS);
-    const stop = setTimeout(() => {
-      clearInterval(id);
-      setBurst(null);
-    }, BURST_TOTAL_MS);
+    // Let the last one's own pop-out animation finish before clearing —
+    // otherwise it'd cut off mid-fade instead of completing the cycle.
+    const stop = setTimeout(() => setBurst(null), (BURST_COUNT - 1) * BURST_CYCLE_MS + BURST_DISPLAY_MS);
     return () => {
       clearInterval(id);
       clearTimeout(stop);
     };
   }, [clickPulse]);
+
+  // Two different spin triggers share the same dial/digits elements:
+  // the automatic intro spin (phase === "dial", once, on first reveal)
+  // and this click-triggered one (every click thereafter, driven by
+  // the same clickPulse the burst effect above uses). A `key` change
+  // is what actually replays a CSS animation on an element that
+  // already has the class — just toggling the className string again
+  // wouldn't restart it if it was still holding the intro spin's
+  // finished state, so each trigger gets its own distinct key to force
+  // a fresh mount.
+  const dialSpinClass =
+    phase === "dial" ? "animate-dial-spin-once" : clickPulse > 0 ? "animate-dial-click-spin" : "";
+  const dialSpinKey = phase === "dial" ? "phase-dial" : `click-${clickPulse}`;
 
   return (
     <div
@@ -138,10 +161,20 @@ export default function ContactPhone({ phase, onActivate }: ContactPhoneProps) {
           {LAYERS.base}
         </pre>
         <pre
-          className={`${LAYER_CLASS} absolute inset-0 ${phase === "dial" ? "animate-dial-spin-once" : ""} ${hoverActive ? "animate-ascii-shimmer" : ""}`}
+          key={dialSpinKey}
+          className={`${LAYER_CLASS} absolute inset-0 ${dialSpinClass} ${hoverActive ? "animate-ascii-shimmer" : ""}`}
           style={{
             ...dialOriginStyle,
-            transform: dialHoverTransform,
+            // Suppressed while the spin animation is running: an inline
+            // transform and a CSS animation both driving `transform` on
+            // the same element fight each other (the animation wins,
+            // but only once it's actually taken over the property),
+            // which is what read as a little shake/twitch right at the
+            // start of every click — the cursor is still sitting on the
+            // phone right after clicking it, so dialHoverTransform is
+            // almost always active at exactly the moment the spin key
+            // remounts this element.
+            transform: dialSpinClass ? undefined : dialHoverTransform,
             transition: revealed ? "transform 0.3s ease-out" : undefined,
           }}
         >
@@ -164,17 +197,20 @@ export default function ContactPhone({ phase, onActivate }: ContactPhoneProps) {
             the numbers spin and hover-tilt together with the dial
             they're printed on. */}
         <div
-          className={`absolute inset-0 ${phase === "dial" ? "animate-dial-spin-once" : ""}`}
+          key={dialSpinKey}
+          className={`absolute inset-0 ${dialSpinClass}`}
           style={{
             ...dialOriginStyle,
-            transform: dialHoverTransform,
+            // See the matching dial <pre>'s style above for why this is
+            // suppressed during a spin.
+            transform: dialSpinClass ? undefined : dialHoverTransform,
             transition: revealed ? "transform 0.3s ease-out" : undefined,
           }}
         >
           {LAYERS.digits.map((d) => (
             <span
               key={d.char}
-              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-0.5 font-mono text-[1.1em] leading-none font-bold text-pink-600 shadow-sm"
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-1 font-mono text-[1.5em] leading-none font-bold text-pink-600 shadow-sm"
               style={{ left: `${(d.col / PHONE_COLS) * 100}%`, top: `${(d.row / PHONE_ROWS) * 100}%` }}
             >
               {d.char}

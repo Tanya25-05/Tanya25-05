@@ -8,7 +8,9 @@
 const BURST_COLS = 30;
 const BURST_ROWS = 18;
 const ROW_SCALE = 2;
-const STROKE_WIDTH = 1.3;
+// Width, in physical units, of the soft anti-aliased band at the
+// star's edge — see phoneAscii.ts's EDGE_SOFTNESS for the same idea.
+const EDGE_SOFTNESS = 1.2;
 
 type Point = { x: number; y: number };
 
@@ -34,13 +36,31 @@ function distPointToPolyline(px: number, py: number, pts: Point[]): number {
   return min;
 }
 
-// Alternating long/short spikes at slightly irregular radii — a
-// perfectly even star reads as a flower, not an explosion. The center
-// sits in physical (x, y*ROW_SCALE) space, same convention as
-// phoneAscii.ts's dial.
+// Standard ray-casting point-in-polygon test — this is what turns the
+// star from a hollow outline (the old look, which at this thinness
+// read as a delicate snowflake rather than a solid "offer" burst) into
+// a filled shape.
+function pointInPolygon(px: number, py: number, pts: Point[]): boolean {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const xi = pts[i].x;
+    const yi = pts[i].y;
+    const xj = pts[j].x;
+    const yj = pts[j].y;
+    const intersect = yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// Fewer, blunter spikes than a snowflake's thin needles — a shallower
+// gap between INNER_R and the outer radii keeps each point wide at its
+// base, closer to a classic "sale sticker" starburst than a sharp,
+// spindly star. The center sits in physical (x, y*ROW_SCALE) space,
+// same convention as phoneAscii.ts's dial.
 const CENTER = { x: 15, y: 18 };
-const OUTER_RADII = [15, 12, 16, 11, 15, 12, 17, 11, 14, 12, 16];
-const INNER_R = 6;
+const OUTER_RADII = [13, 11, 14, 10, 13, 11, 14, 10, 13, 11];
+const INNER_R = 8;
 
 function burstOutline(): Point[] {
   const pts: Point[] = [];
@@ -60,14 +80,18 @@ function burstOutline(): Point[] {
 const OUTLINE = burstOutline();
 
 // Same shading ramp as phoneAscii.ts, for the same reason it's used
-// there — a soft, textured line instead of a single flat character.
+// there — a soft, textured edge instead of a single flat character,
+// fading from the lightest block right at the star's boundary to the
+// densest one a short distance inside it (and staying solid all the
+// way to the center — an "offer" badge reads as a filled shape, not a
+// hollow one).
 const CHARS = ["░", "▒", "▓", "▓", "█"];
-function shadeChar(dist: number): string {
-  const ratio = dist / STROKE_WIDTH;
-  if (ratio > 0.8) return CHARS[0];
-  if (ratio > 0.6) return CHARS[1];
-  if (ratio > 0.35) return CHARS[2];
-  if (ratio > 0.15) return CHARS[3];
+function shadeChar(insideDist: number): string {
+  const ratio = Math.min(insideDist / EDGE_SOFTNESS, 1);
+  if (ratio < 0.15) return CHARS[0];
+  if (ratio < 0.35) return CHARS[1];
+  if (ratio < 0.6) return CHARS[2];
+  if (ratio < 0.85) return CHARS[3];
   return CHARS[4];
 }
 
@@ -76,8 +100,13 @@ function generateBurstLayer(): string {
   for (let row = 0; row < BURST_ROWS; row++) {
     let line = "";
     for (let col = 0; col < BURST_COLS; col++) {
-      const d = distPointToPolyline(col, row * ROW_SCALE, OUTLINE);
-      line += d < STROKE_WIDTH ? shadeChar(d) : " ";
+      const px = col;
+      const py = row * ROW_SCALE;
+      if (pointInPolygon(px, py, OUTLINE)) {
+        line += shadeChar(distPointToPolyline(px, py, OUTLINE));
+      } else {
+        line += " ";
+      }
     }
     lines.push(line);
   }

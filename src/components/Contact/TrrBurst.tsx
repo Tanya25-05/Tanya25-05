@@ -17,9 +17,8 @@ export default function TrrBurst({ tint }: { tint: BurstTint }) {
       <pre className="whitespace-pre font-mono leading-[1.05] text-[clamp(4px,0.8vw,7px)]">
         {BURST_ART}
       </pre>
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 font-mono text-[clamp(8px,1.6vw,13px)] font-bold leading-none tracking-tight">
-        <span>TRR</span>
-        <span>TRR!!</span>
+      <div className="absolute inset-0 flex items-center justify-center whitespace-nowrap font-mono text-[clamp(10px,2vw,16px)] font-black leading-none tracking-tight text-white">
+        <span>TRR TRR!!</span>
       </div>
     </div>
   );

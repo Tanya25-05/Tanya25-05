@@ -42,12 +42,12 @@ export default function Home() {
         data-stream-x="50"
         className="relative max-w-5xl mx-auto px-6 py-20 w-full"
       >
-        <div className="mb-4 text-center">
-          <p className="font-mono text-xs tracking-[0.2em] text-pink-500 mb-2">§ 06</p>
-          <h2 className="font-serif italic font-medium text-[40px] text-zinc-900">Contact</h2>
-        </div>
+        <SectionHeading index="06">Contact</SectionHeading>
 
-        <Reveal>
+        {/* SectionHeading's own mb-8 (32px) is shared by every section
+            on the page — pulling just this one closer without touching
+            that shared spacing, down to a 16px net gap. */}
+        <Reveal className="-mt-4">
           <ContactSection />
         </Reveal>
       </section>

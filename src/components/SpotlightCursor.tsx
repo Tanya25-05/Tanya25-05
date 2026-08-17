@@ -2,20 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const DEFAULT_DIAMETER = 20; // px — resting size away from any text (+4px)
+const DEFAULT_DIAMETER = 16; // px — resting size away from any text
 const ZOOM = 1.6;
-// Matches the 0.34lh clip radius in globals.css (times this same
+// Matches the 0.3lh clip radius in globals.css (times this same
 // ZOOM) — see that rule for why the circle is deliberately kept close
 // to one line's height instead of the full multi-line span it used to
 // cover.
-const CLIP_RADIUS_LH = 0.34;
-// Flat +4px on top of the lh-based radius, kept in sync with the
-// matching `+ 4px` in globals.css's clip-path — both the always-
+const CLIP_RADIUS_LH = 0.3;
+// Flat +3px on top of the lh-based radius, kept in sync with the
+// matching `+ 3px` in globals.css's clip-path — both the always-
 // visible dot below and the magnified-text clip above have to grow by
 // the same amount or their edges drift apart (the "pink cutting out"
 // bug the clip-path comment describes, from an earlier size mismatch
 // between these two).
-const EXTRA_RADIUS_PX = 4;
+const EXTRA_RADIUS_PX = 3;
 
 // Any of these tags, once they're a leaf (no element children of
 // their own) with real text in them, gets the effect — not just a
@@ -51,6 +51,52 @@ function findTextElement(target: EventTarget | null): HTMLElement | null {
   return null;
 }
 
+type CaretDocument = Document & {
+  caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+  caretRangeFromPoint?: (x: number, y: number) => Range | null;
+};
+
+// findTextElement above only checks whether the cursor is somewhere
+// inside a *leaf element's rectangular bounding box* — which for a
+// large headline (the Hero name, at text-7xl) has generous line-height
+// well beyond the actual glyphs, so the circle was widening over
+// visibly empty space above/below the letters, and jumping size
+// inconsistently between that and the much smaller "Hi, I'm" line
+// right next to it. This does a real hit-test against the nearest
+// actual character's own tight bounding box instead, so "wide" only
+// ever means the pixel is actually on rendered text.
+function isNearGlyph(x: number, y: number, container: HTMLElement): boolean {
+  const doc = document as CaretDocument;
+  let node: Node | null = null;
+  let offset = 0;
+  if (doc.caretPositionFromPoint) {
+    const pos = doc.caretPositionFromPoint(x, y);
+    if (!pos) return false;
+    node = pos.offsetNode;
+    offset = pos.offset;
+  } else if (doc.caretRangeFromPoint) {
+    const range = doc.caretRangeFromPoint(x, y);
+    if (!range) return false;
+    node = range.startContainer;
+    offset = range.startOffset;
+  } else {
+    return true; // Neither API available — fall back to the old bounding-box behavior.
+  }
+  if (!node || node.nodeType !== Node.TEXT_NODE || !container.contains(node)) return false;
+  const text = node.textContent ?? "";
+  const charOffset = Math.min(offset, text.length - 1);
+  if (charOffset < 0 || !text[charOffset]?.trim()) return false;
+
+  const charRange = document.createRange();
+  charRange.setStart(node, charOffset);
+  charRange.setEnd(node, charOffset + 1);
+  const rect = charRange.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return false;
+
+  const pad = 3; // small forgiveness margin, px — a hard pixel-perfect edge felt twitchy.
+  return x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + pad;
+}
+
 export default function SpotlightCursor() {
   const [pos, setPos] = useState({ x: -999, y: -999 });
   const [diameter, setDiameter] = useState(DEFAULT_DIAMETER);
@@ -78,7 +124,8 @@ export default function SpotlightCursor() {
     const onMove = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
 
-      const el = findTextElement(e.target);
+      const candidate = findTextElement(e.target);
+      const el = candidate && isNearGlyph(e.clientX, e.clientY, candidate) ? candidate : null;
       if (el !== activeElRef.current) {
         clearActive();
         activeElRef.current = el;

@@ -81,19 +81,19 @@ body {
   /* clip-path is clipped in this element's own local coordinates and
      *then* the transform above scales that already-clipped result —
      so the circle that actually ends up on screen is this radius
-     times --spotlight-zoom, not this radius itself. 0.34lh here times
-     the 1.6x zoom lands just over 0.5lh — a touch over one line — so
-     the circle stays close to text size instead of bleeding into the
+     times --spotlight-zoom, not this radius itself. 0.3lh here times
+     the 1.6x zoom lands just under 0.5lh — a diameter just under one
+     line — so the circle never grows tall enough to bleed into the
      line above/below (which was the "pink cutting out" bug: at the
      old 1.5lh radius the on-screen circle was ~5 lines tall, spilling
      into a neighboring paragraph that has no matching duplicated text
      under it, so the fill just stopped mid-circle at that boundary).
-     The flat +4px on top of that radius has to stay in sync with
+     The flat +3px on top of that radius has to stay in sync with
      SpotlightCursor.tsx's matching EXTRA_RADIUS_PX (added to the same
      pre-zoom radius there, before its own *2*ZOOM) — otherwise this
      clip and the always-visible dot cursor it's meant to sit flush
      with drift apart. */
-  clip-path: circle(calc(0.34lh + 4px) at var(--spotlight-local-x, -999px) var(--spotlight-local-y, -999px));
+  clip-path: circle(calc(0.3lh + 3px) at var(--spotlight-local-x, -999px) var(--spotlight-local-y, -999px));
 }
 
 @keyframes float-y {
@@ -278,6 +278,13 @@ body {
   animation: dial-spin-once 0.7s cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
 }
 
+/* Same spin, but for every click after the intro (see ContactPhone.tsx's
+   dialSpinClass) — a full 1s per the "rotate for 1 sec" ask, rather
+   than reusing the intro's quicker 0.7s. */
+.animate-dial-click-spin {
+  animation: dial-spin-once 1s cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
+}
+
 @keyframes receiver-bounce-once {
   0% {
     transform: translateY(-6px);
@@ -389,13 +396,14 @@ body {
 }
 
 /* One "TRR TRR!!" callout at a time around the ringing phone: pops in
-   with a little overshoot, holds, then fades back out — quick (550ms),
-   well inside the much longer BURST_CYCLE_MS gap in ContactPhone.tsx
-   between one ring and the next, so it reads as a paced ring...ring
-   rather than a continuous flicker. `forwards` below is what keeps it
-   sitting at the faded-out (opacity: 0) end state for the rest of
-   that gap instead of snapping back to fully visible once the
-   animation itself finishes but the element is still mounted. */
+   with a little overshoot, holds, then fades back out over a full
+   second — this duration has to match BURST_DISPLAY_MS in
+   ContactPhone.tsx, which adds its own separate 1s gap on top before
+   the next one spawns, so it reads as a paced ring...ring rather than
+   a continuous flicker. `forwards` below is what keeps it sitting at
+   the faded-out (opacity: 0) end state for that gap instead of
+   snapping back to fully visible once the animation itself finishes
+   but the element is still mounted. */
 @keyframes burst-pop {
   0% {
     opacity: 0;
@@ -419,7 +427,7 @@ body {
 }
 
 .animate-burst-pop {
-  animation: burst-pop 550ms ease-in-out forwards;
+  animation: burst-pop 1000ms ease-in-out forwards;
 }
 
 /* The button itself gently scales in/out on top of ring-pulse's own

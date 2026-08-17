@@ -10,7 +10,10 @@
 // screen, matching the reference rotary-phone icon this is modeled on.
 
 export const PHONE_COLS = 96;
-export const PHONE_ROWS = 50;
+// Grown from 50 — the base/prongs/dial got pushed further down (see
+// BASE_TOP_Y below) to open up a real gap above them for the receiver,
+// which needed more total vertical room than the old grid had.
+export const PHONE_ROWS = 66;
 // Monospace character cells are roughly twice as tall as they are
 // wide. Without correcting for that, a "circle" plotted in raw
 // (col, row) space renders as a tall oval. Physical y = row *
@@ -115,25 +118,29 @@ function sampleBezier(p0: Point, p1: Point, p2: Point, steps: number): Point[] {
 
 // --- Shape layout, in physical units (x: 0-96, y: 0-100) ---
 
-// Sized and positioned to sit fully inside the (now taller) base below
-// — see baseDistance's trapezoid bounds — with equal ~9-unit margin on
-// every side rather than grazing its top/bottom edges.
-const DIAL_CENTER = { x: 48, y: 74 };
+// Base trapezoid bounds, hoisted so both baseDistance and its
+// top-corner rounding below stay in sync with a single source of
+// truth instead of two copies of the same four numbers. Shifted down
+// 29 units from where they sat before (30 to 98) — the receiver above
+// has fixed coordinates of its own, and at the old position the
+// prongs had already risen high enough to overlap it. Moving the base
+// down instead of the receiver up is what the extra PHONE_ROWS room
+// above was for.
+const BASE_TOP_Y = 59;
+const BASE_BOTTOM_Y = 127;
+const BASE_TOP_X0 = 22;
+const BASE_TOP_X1 = 74;
+const BASE_BOTTOM_X0 = 8;
+const BASE_BOTTOM_X1 = 88;
+
+// Centered in the base's own vertical span ((59 + 127) / 2), not just
+// horizontally.
+const DIAL_CENTER = { x: 48, y: (BASE_TOP_Y + BASE_BOTTOM_Y) / 2 };
 const DIAL_R = 15;
 const DIAL_CENTER_HOLE_R = 5.3;
 const DIAL_RING_R = 11;
 const DIAL_HOLE_R = 2;
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-
-// Base trapezoid bounds, hoisted so both baseDistance and its
-// top-corner rounding below stay in sync with a single source of
-// truth instead of two copies of the same four numbers.
-const BASE_TOP_Y = 50;
-const BASE_BOTTOM_Y = 98;
-const BASE_TOP_X0 = 22;
-const BASE_TOP_X1 = 74;
-const BASE_BOTTOM_X0 = 8;
-const BASE_BOTTOM_X1 = 88;
 // How much to round off just the two top corners (where the base
 // meets the cradle prongs) — the bottom two stay sharp, matching the
 // reference art. Implemented as a radial "bump" subtracted from the
@@ -156,12 +163,16 @@ function baseDistance(px: number, py: number): number {
   let d = insideTrapezoid(px, py, BASE_TOP_X0, BASE_TOP_X1, BASE_TOP_Y, BASE_BOTTOM_X0, BASE_BOTTOM_X1, BASE_BOTTOM_Y);
   d -= Math.max(0, TOP_CORNER_ROUND - Math.hypot(px - BASE_TOP_X0, py - BASE_TOP_Y));
   d -= Math.max(0, TOP_CORNER_ROUND - Math.hypot(px - BASE_TOP_X1, py - BASE_TOP_Y));
-  d = Math.max(d, insideRect(px, py, 29, 46, 39, 56)); // left cradle prong
-  d = Math.max(d, insideRect(px, py, 57, 46, 67, 56)); // right cradle prong
+  // Prong/holder Y bounds move down with BASE_TOP_Y, keeping the same
+  // protrusion-above/embedding-below the top edge as the original
+  // (46,56)/(38,56) — so they stay raised nubs sitting just above the
+  // base's own top edge instead of getting swallowed into its body.
+  d = Math.max(d, insideRect(px, py, 29, 55, 39, 65)); // left cradle prong
+  d = Math.max(d, insideRect(px, py, 57, 55, 67, 65)); // right cradle prong
   // Center holder: a vertical post between the two prongs, taller than
   // either of them, that the handset actually balances across —
   // rather than just two disconnected side bumps.
-  d = Math.max(d, insideRect(px, py, 41, 38, 55, 56));
+  d = Math.max(d, insideRect(px, py, 41, 47, 55, 65));
   return d;
 }
 

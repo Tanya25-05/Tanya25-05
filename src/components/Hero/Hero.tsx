@@ -7,6 +7,7 @@ import { generateMountainLayer } from "./ascii";
 import Birds from "./Birds";
 import Dust from "./Dust";
 import FrontMountainMask from "./FrontMountainMask";
+import HeroBrushStrokesMobile from "./HeroBrushStrokesMobile";
 import HeroNavTable from "./HeroNavTable";
 import HeroText from "./HeroText";
 import MountainLayer from "./MountainLayer";
@@ -20,7 +21,14 @@ const FRONT = generateMountainLayer(COLS, FRONT_ROWS, 8, 11);
 
 export default function Hero() {
   return (
-    <section className="relative flex h-screen w-full flex-col items-center justify-center overflow-hidden bg-white">
+    // h-dvh, not h-screen: on mobile browsers, a static 100vh is sized
+    // for the largest possible viewport (address bar collapsed), which
+    // is taller than what's actually visible on first load (address
+    // bar still showing) — bottom-anchored content like the mountains
+    // below ends up positioned below the fold until the page is
+    // nudged. The dynamic viewport unit tracks the real visible height
+    // instead, so bottom-0 content lines up with what's on screen.
+    <section className="relative flex h-dvh w-full flex-col items-center justify-center overflow-hidden bg-white">
       {/* almost-transparent back layer — behind the text, free to overlap it */}
       <div className="absolute inset-0 z-0" aria-hidden>
         <MountainLayer
@@ -54,6 +62,7 @@ export default function Hero() {
       <HeroNavTable />
 
       <PaintBrushGlow />
+      <HeroBrushStrokesMobile />
       <AmbientAudio />
       <div
         data-stream-checkpoint="Hero"
